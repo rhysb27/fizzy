@@ -1,26 +1,28 @@
 class Users::CredentialsController < ApplicationController
-  before_action :set_credential, only: :destroy
+  before_action :set_credential, only: %i[ edit update destroy ]
 
   def index
     @credentials = Current.identity.credentials.order(name: :asc, created_at: :desc)
-  end
-
-  def new
     @creation_options = Identity::Credential.creation_options(identity: Current.identity, display_name: Current.user.name)
     session[:webauthn_challenge] = @creation_options.challenge
   end
 
   def create
-    Identity::Credential.register(
-      identity: Current.identity,
-      name: credential_params[:name],
-      client_data_json: credential_params[:client_data_json],
-      attestation_object: credential_params[:attestation_object],
-      challenge: session.delete(:webauthn_challenge),
-      origin: request.base_url,
-      transports: Array(credential_params[:transports])
+    credential = Current.identity.credentials.register(
+      passkey: passkey_params,
+      challenge: session.delete(:webauthn_challenge)
     )
 
+    render json: { location: edit_user_credential_path(Current.user, credential, created: true) }
+  rescue ActionPack::WebAuthn::Authenticator::Response::InvalidResponseError => error
+    render json: { error: error.message }, status: :unprocessable_entity
+  end
+
+  def edit
+  end
+
+  def update
+    @credential.update!(credential_params)
     redirect_to user_credentials_path(Current.user)
   end
 
@@ -35,6 +37,10 @@ class Users::CredentialsController < ApplicationController
     end
 
     def credential_params
-      params.expect(credential: [ :name, :client_data_json, :attestation_object, transports: [] ])
+      params.expect(credential: [ :name ])
+    end
+
+    def passkey_params
+      params.expect(passkey: [ :client_data_json, :attestation_object, transports: [] ])
     end
 end
