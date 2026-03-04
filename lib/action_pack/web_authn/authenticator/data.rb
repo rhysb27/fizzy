@@ -60,16 +60,29 @@ class ActionPack::WebAuthn::Authenticator::Data
   attr_reader :bytes, :relying_party_id_hash, :flags, :sign_count, :aaguid, :credential_id, :public_key_bytes
 
   class << self
+    # Wraps raw authenticator data into a Data instance. Accepts an existing
+    # Data object (returned as-is), a Base64URL-encoded string, or raw binary.
     def wrap(data)
       if data.is_a?(self)
         data
       else
+        data = Base64.urlsafe_decode64(data) unless data.encoding == Encoding::BINARY
         decode(data)
       end
+    rescue ArgumentError
+      raise ActionPack::WebAuthn::InvalidResponseError, "Invalid base64 encoding in authenticator data"
     end
 
+    # Decodes raw authenticator data bytes into a Data instance, parsing the
+    # RP ID hash, flags, sign count, and (if present) attested credential data.
     def decode(bytes)
       bytes = bytes.bytes if bytes.is_a?(String)
+
+      minimum_length = RELYING_PARTY_ID_HASH_LENGTH + FLAGS_LENGTH + SIGN_COUNT_LENGTH
+      if bytes.length < minimum_length
+        raise ActionPack::WebAuthn::InvalidResponseError, "Authenticator data is too short"
+      end
+
       position = 0
 
       relying_party_id_hash = bytes[position, RELYING_PARTY_ID_HASH_LENGTH].pack("C*")
@@ -86,12 +99,20 @@ class ActionPack::WebAuthn::Authenticator::Data
       public_key_bytes = nil
 
       if flags & ATTESTED_CREDENTIAL_DATA_FLAG != 0
+        if bytes.length < position + AAGUID_LENGTH + CREDENTIAL_ID_LENGTH_BYTES
+          raise ActionPack::WebAuthn::InvalidResponseError, "Authenticator data is too short for attested credential data"
+        end
+
         aaguid_bytes = bytes[position, AAGUID_LENGTH].pack("C*")
         aaguid = aaguid_bytes.unpack("H8H4H4H4H12").join("-")
         position += AAGUID_LENGTH
 
         credential_id_length = bytes[position, CREDENTIAL_ID_LENGTH_BYTES].pack("C*").unpack1("n")
         position += CREDENTIAL_ID_LENGTH_BYTES
+
+        if bytes.length < position + credential_id_length + 1
+          raise ActionPack::WebAuthn::InvalidResponseError, "Authenticator data is too short for credential ID and public key"
+        end
 
         credential_id = Base64.urlsafe_encode64(bytes[position, credential_id_length].pack("C*"), padding: false)
         position += credential_id_length
@@ -121,10 +142,13 @@ class ActionPack::WebAuthn::Authenticator::Data
     @public_key_bytes = public_key_bytes
   end
 
+  # Returns true if the user performed a test of presence (e.g., touched the
+  # authenticator).
   def user_present?
     flags & USER_PRESENT_FLAG != 0
   end
 
+  # Returns true if the user was verified via biometrics, PIN, or similar.
   def user_verified?
     flags & USER_VERIFIED_FLAG != 0
   end
@@ -141,6 +165,9 @@ class ActionPack::WebAuthn::Authenticator::Data
     flags & BACKUP_STATE_FLAG != 0
   end
 
+  # Decodes the COSE public key bytes into an OpenSSL key object.
+  # Returns +nil+ when no attested credential data is present (authentication
+  # responses).
   def public_key
     @public_key ||= ActionPack::WebAuthn::CoseKey.decode(public_key_bytes).to_openssl_key if public_key_bytes
   end

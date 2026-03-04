@@ -49,11 +49,8 @@
 #
 # == Errors
 #
-# Raises +DecodeError+ when encountering malformed or unsupported CBOR data.
+# Raises +InvalidCborError+ when encountering malformed or unsupported CBOR data.
 class ActionPack::WebAuthn::CborDecoder
-  # Raised when the decoder encounters invalid or unsupported CBOR data.
-  class DecodeError < StandardError; end
-
   # Major types
   UNSIGNED_INTEGER_TYPE = 0
   NEGATIVE_INTEGER_TYPE = 1
@@ -86,6 +83,10 @@ class ActionPack::WebAuthn::CborDecoder
   MAX_DEPTH = 16
   MAX_SIZE = 10.megabytes
 
+  # Tags
+  POSITIVE_BIGNUM_TAG = 2
+  NEGATIVE_BIGNUM_TAG = 3
+
   class << self
     # Decodes a CBOR-encoded byte sequence into a Ruby object.
     #
@@ -98,7 +99,7 @@ class ActionPack::WebAuthn::CborDecoder
   end
 
   def initialize(bytes, max_depth: MAX_DEPTH, max_size: MAX_SIZE) # :nodoc:
-    raise DecodeError, "Input exceeds maximum size" if bytes.length > max_size
+    raise ActionPack::WebAuthn::InvalidCborError, "Input exceeds maximum size" if bytes.length > max_size
 
     @bytes = bytes
     @max_depth = max_depth
@@ -108,8 +109,8 @@ class ActionPack::WebAuthn::CborDecoder
 
   # Decodes the next CBOR data item from the byte sequence.
   def decode
-    raise DecodeError, "Unexpected end of input" if @position >= @bytes.length
-    raise DecodeError, "Maximum nesting depth exceeded" if @depth > @max_depth
+    raise ActionPack::WebAuthn::InvalidCborError, "Unexpected end of input" if @position >= @bytes.length
+    raise ActionPack::WebAuthn::InvalidCborError, "Maximum nesting depth exceeded" if @depth >= @max_depth
 
     @depth += 1
 
@@ -190,13 +191,19 @@ class ActionPack::WebAuthn::CborDecoder
       when FOUR_BYTE_VALUE_FOLLOWS then read_bytes(4).pack("C*").unpack1("g")
       when EIGHT_BYTE_VALUE_FOLLOWS then read_bytes(8).pack("C*").unpack1("G")
       else
-        raise DecodeError, "Invalid simple value: #{info}"
+        raise ActionPack::WebAuthn::InvalidCborError, "Invalid simple value: #{info}"
       end
     end
 
     def decode_tag
-      read_argument
-      decode
+      tag = read_argument
+      value = decode
+
+      case tag
+      when POSITIVE_BIGNUM_TAG then value.bytes.inject(0) { |n, b| (n << 8) | b }
+      when NEGATIVE_BIGNUM_TAG then -1 - value.bytes.inject(0) { |n, b| (n << 8) | b }
+      else value
+      end
     end
 
     def decode_half_float
@@ -225,9 +232,9 @@ class ActionPack::WebAuthn::CborDecoder
       when FOUR_BYTE_VALUE_FOLLOWS then read_bytes(4).pack("C*").unpack1("N")
       when EIGHT_BYTE_VALUE_FOLLOWS then read_bytes(8).pack("C*").unpack1("Q>")
       when RESERVED_VALUE_RANGE
-        raise DecodeError, "Reserved additional info: #{info}"
+        raise ActionPack::WebAuthn::InvalidCborError, "Reserved additional info: #{info}"
       else
-        raise DecodeError, "Invalid additional info: #{info}"
+        raise ActionPack::WebAuthn::InvalidCborError, "Invalid additional info: #{info}"
       end
     end
 
@@ -245,7 +252,7 @@ class ActionPack::WebAuthn::CborDecoder
     end
 
     def read_bytes(length)
-      raise DecodeError, "Unexpected end of input" if @position + length > @bytes.length
+      raise ActionPack::WebAuthn::InvalidCborError, "Unexpected end of input" if @position + length > @bytes.length
 
       bytes = @bytes[@position, length]
       @position += length
@@ -253,7 +260,7 @@ class ActionPack::WebAuthn::CborDecoder
     end
 
     def read_byte
-      raise DecodeError, "Unexpected end of input" if @position >= @bytes.length
+      raise ActionPack::WebAuthn::InvalidCborError, "Unexpected end of input" if @position >= @bytes.length
 
       byte = @bytes[@position]
       @position += 1

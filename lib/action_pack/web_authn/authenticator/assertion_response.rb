@@ -9,20 +9,19 @@
 #
 #   # Look up the credential by ID
 #   credential = user.credentials.find_by!(
-#     credentail_id: params[:id]
+#     credential_id: params[:id]
 #   )
 #
 #   response = ActionPack::WebAuthn::Authenticator::AssertionResponse.new(
 #     client_data_json: params[:response][:clientDataJSON],
 #     authenticator_data: params[:response][:authenticatorData],
 #     signature: params[:response][:signature],
-#     credential: credential.to_public_key_credential
-#   )
-#
-#   response.validate!(
-#     challenge: session[:authentication_challenge],
+#     credential: credential.to_public_key_credential,
+#     challenge: ActionPack::WebAuthn::Current.challenge,
 #     origin: "https://example.com"
 #   )
+#
+#   response.validate!
 #
 # == Validation
 #
@@ -34,37 +33,43 @@
 class ActionPack::WebAuthn::Authenticator::AssertionResponse < ActionPack::WebAuthn::Authenticator::Response
   attr_reader :credential, :authenticator_data, :signature
 
+  validate :client_data_type_must_be_get
+  validate :signature_must_be_valid
+  validate :sign_count_must_increase
+
   def initialize(credential:, authenticator_data:, signature:, **attributes)
     super(**attributes)
     @credential = credential
     @signature = signature
+    @signature = Base64.urlsafe_decode64(@signature) unless @signature.encoding == Encoding::BINARY
     @authenticator_data = ActionPack::WebAuthn::Authenticator::Data.wrap(authenticator_data)
-  end
-
-  def validate!(**args)
-    super(**args)
-
-    unless client_data["type"] == "webauthn.get"
-      raise InvalidResponseError, "Client data type is not webauthn.get"
-    end
-
-    unless valid_signature?
-      raise InvalidResponseError, "Invalid signature"
-    end
-
-    unless sign_count_increased?
-      raise InvalidResponseError, "Sign count did not increase"
-    end
+  rescue ArgumentError
+    raise ActionPack::WebAuthn::InvalidResponseError, "Invalid base64 encoding in signature"
   end
 
   private
-    def valid_signature?
+    def client_data_type_must_be_get
+      unless client_data["type"] == "webauthn.get"
+        errors.add(:base, "Client data type is not webauthn.get")
+      end
+    end
+
+    def signature_must_be_valid
       client_data_hash = Digest::SHA256.digest(client_data_json)
       signed_data = authenticator_data.bytes.pack("C*") + client_data_hash
+      digest = credential.public_key.oid == "ED25519" ? nil : "SHA256"
 
-      credential.public_key.verify("SHA256", signature, signed_data)
+      unless credential.public_key.verify(digest, signature, signed_data)
+        errors.add(:base, "Invalid signature")
+      end
     rescue OpenSSL::PKey::PKeyError
-      false
+      errors.add(:base, "Invalid signature")
+    end
+
+    def sign_count_must_increase
+      unless sign_count_increased?
+        errors.add(:base, "Sign count did not increase")
+      end
     end
 
     def sign_count_increased?

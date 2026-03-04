@@ -15,8 +15,6 @@ Rails.application.routes.draw do
       resource :avatar
       resource :role
       resource :events
-      resources :credentials, except: %i[ show new ]
-
       resources :push_subscriptions
 
       resources :email_addresses, param: :token do
@@ -174,8 +172,10 @@ Rails.application.routes.draw do
   resource :landing
 
   namespace :my do
+    resource :passkey_challenge, only: :create
     resource :identity, only: :show
     resources :access_tokens
+    resources :passkeys, except: %i[ show new ]
     resources :pins
     resource :timezone
     resource :menu

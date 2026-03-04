@@ -17,7 +17,7 @@
 class ActionPack::WebAuthn::Authenticator::AttestationVerifiers::None
   def verify!(attestation, client_data_json:)
     if attestation.attestation_statement.present?
-      raise ActionPack::WebAuthn::Authenticator::Response::InvalidResponseError,
+      raise ActionPack::WebAuthn::InvalidResponseError,
         "Attestation statement must be empty for 'none' format"
     end
   end

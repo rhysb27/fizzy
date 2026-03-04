@@ -18,65 +18,57 @@
 #
 # == Example
 #
-#   response.validate!(
-#     challenge: session[:webauthn_challenge],
+#   response = ActionPack::WebAuthn::Authenticator::AssertionResponse.new(
+#     client_data_json: client_data_json,
+#     authenticator_data: authenticator_data,
+#     signature: signature,
+#     credential: credential,
+#     challenge: ActionPack::WebAuthn::Current.challenge,
 #     origin: "https://example.com",
 #     user_verification: :required
 #   )
 #
+#   response.validate!
+#
 class ActionPack::WebAuthn::Authenticator::Response
-  # Raised when response validation fails.
-  class InvalidResponseError < StandardError; end
+  include ActiveModel::Validations
 
   attr_reader :client_data_json
+  attr_accessor :challenge, :origin, :user_verification
 
-  def initialize(client_data_json:)
+  validate :challenge_must_match
+  validate :challenge_must_not_be_expired
+  validate :origin_must_match
+  validate :must_not_be_cross_origin
+  validate :must_not_have_token_binding
+  validate :relying_party_id_must_match
+  validate :user_must_be_present
+  validate :user_must_be_verified_when_required
+
+  def initialize(client_data_json:, challenge: nil, origin: nil, user_verification: :preferred)
     @client_data_json = client_data_json
+    @challenge = challenge
+    @origin = origin
+    @user_verification = user_verification.to_sym
   end
 
-  def valid?(**args)
-    validate!(**args)
-    true
-  rescue InvalidResponseError
-    false
+  def validate!
+    super
+  rescue ActiveModel::ValidationError
+    raise ActionPack::WebAuthn::InvalidResponseError, errors.full_messages.join(", ")
   end
 
-  def validate!(challenge:, origin:, user_verification: :preferred)
-    unless challenge_matches?(challenge)
-      raise InvalidResponseError, "Challenge does not match"
-    end
-
-    unless origin_matches?(origin)
-      raise InvalidResponseError, "Origin does not match"
-    end
-
-    if cross_origin?
-      raise InvalidResponseError, "Cross-origin requests are not supported"
-    end
-
-    if token_binding_present?
-      raise InvalidResponseError, "Token binding is not supported"
-    end
-
-    unless relying_party_id_matches?
-      raise InvalidResponseError, "Relying party ID does not match"
-    end
-
-    unless user_present?
-      raise InvalidResponseError, "User presence is required"
-    end
-
-    if user_verification == :required && !user_verified?
-      raise InvalidResponseError, "User verification is required"
-    end
-  end
-
+  # Returns the RelyingParty used for RP ID validation.
   def relying_party
     ActionPack::WebAuthn.relying_party
   end
 
+  # Parses the client data JSON string into a Hash. Raises
+  # +InvalidResponseError+ if the JSON is malformed.
   def client_data
     @client_data ||= JSON.parse(client_data_json)
+  rescue JSON::ParserError
+    raise ActionPack::WebAuthn::InvalidResponseError, "Client data is not valid JSON"
   end
 
   def authenticator_data
@@ -84,34 +76,68 @@ class ActionPack::WebAuthn::Authenticator::Response
   end
 
   private
-    def challenge_matches?(expected_challenge)
-      ActiveSupport::SecurityUtils.secure_compare(expected_challenge, client_data["challenge"])
+    def challenge_must_match
+      if challenge.blank?
+        errors.add(:base, "Challenge missing")
+      elsif client_data["challenge"].blank?
+        errors.add(:base, "Challenge missing in client data")
+      elsif !ActiveSupport::SecurityUtils.secure_compare(challenge.to_s, client_data["challenge"].to_s)
+        errors.add(:base, "Challenge does not match")
+      end
     end
 
-    def origin_matches?(expected_origin)
-      ActiveSupport::SecurityUtils.secure_compare(expected_origin, client_data["origin"])
+    def challenge_must_not_be_expired
+      return if errors.any? || challenge.blank?
+
+      signed_message = Base64.urlsafe_decode64(challenge)
+
+      unless ActionPack::WebAuthn.challenge_verifier.verified(signed_message)
+        errors.add(:base, "Challenge has expired")
+      end
+    rescue ArgumentError
+      errors.add(:base, "Challenge is invalid")
     end
 
-    def relying_party_id_matches?
-      ActiveSupport::SecurityUtils.secure_compare(
+    def origin_must_match
+      if origin.blank?
+        errors.add(:base, "Origin missing")
+      elsif client_data["origin"].blank?
+        errors.add(:base, "Origin missing in client data")
+      elsif !ActiveSupport::SecurityUtils.secure_compare(origin.to_s, client_data["origin"].to_s)
+        errors.add(:base, "Origin does not match")
+      end
+    end
+
+    def must_not_be_cross_origin
+      if client_data["crossOrigin"] == true
+        errors.add(:base, "Cross-origin requests are not supported")
+      end
+    end
+
+    def must_not_have_token_binding
+      if client_data.dig("tokenBinding", "status") == "present"
+        errors.add(:base, "Token binding is not supported")
+      end
+    end
+
+    def relying_party_id_must_match
+      unless ActiveSupport::SecurityUtils.secure_compare(
         Digest::SHA256.digest(relying_party.id),
         authenticator_data&.relying_party_id_hash || ""
       )
+        errors.add(:base, "Relying party ID does not match")
+      end
     end
 
-    def cross_origin?
-      client_data["crossOrigin"] == true
+    def user_must_be_present
+      unless authenticator_data&.user_present?
+        errors.add(:base, "User presence is required")
+      end
     end
 
-    def token_binding_present?
-      client_data.dig("tokenBinding", "status") == "present"
-    end
-
-    def user_present?
-      authenticator_data&.user_present?
-    end
-
-    def user_verified?
-      authenticator_data&.user_verified?
+    def user_must_be_verified_when_required
+      if user_verification == :required && !authenticator_data&.user_verified?
+        errors.add(:base, "User verification is required")
+      end
     end
 end

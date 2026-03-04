@@ -1,10 +1,12 @@
 require "test_helper"
 
 class ActionPack::WebAuthn::Authenticator::ResponseTest < ActiveSupport::TestCase
+  include WebauthnTestHelper
+
   setup do
     ActionPack::WebAuthn::Current.host = "example.com"
 
-    @challenge = "test-challenge-123"
+    @challenge = webauthn_challenge
     @origin = "https://example.com"
     @client_data_json = {
       challenge: @challenge,
@@ -15,7 +17,9 @@ class ActionPack::WebAuthn::Authenticator::ResponseTest < ActiveSupport::TestCas
     @authenticator_data = build_authenticator_data
     @response = TestableResponse.new(
       client_data_json: @client_data_json,
-      authenticator_data: @authenticator_data
+      authenticator_data: @authenticator_data,
+      challenge: @challenge,
+      origin: @origin
     )
   end
 
@@ -34,28 +38,34 @@ class ActionPack::WebAuthn::Authenticator::ResponseTest < ActiveSupport::TestCas
   end
 
   test "valid? returns true when challenge and origin match" do
-    assert @response.valid?(challenge: @challenge, origin: @origin)
+    assert @response.valid?
   end
 
   test "valid? returns false when challenge does not match" do
-    assert_not @response.valid?(challenge: "wrong-challenge", origin: @origin)
+    @response.challenge = "wrong-challenge"
+    assert_not @response.valid?
   end
 
   test "valid? returns false when origin does not match" do
-    assert_not @response.valid?(challenge: @challenge, origin: "https://evil.com")
+    @response.origin = "https://evil.com"
+    assert_not @response.valid?
   end
 
   test "validate! raises when challenge does not match" do
-    error = assert_raises(ActionPack::WebAuthn::Authenticator::Response::InvalidResponseError) do
-      @response.validate!(challenge: "wrong-challenge", origin: @origin)
+    @response.challenge = "wrong-challenge"
+
+    error = assert_raises(ActionPack::WebAuthn::InvalidResponseError) do
+      @response.validate!
     end
 
     assert_equal "Challenge does not match", error.message
   end
 
   test "validate! raises when origin does not match" do
-    error = assert_raises(ActionPack::WebAuthn::Authenticator::Response::InvalidResponseError) do
-      @response.validate!(challenge: @challenge, origin: "https://evil.com")
+    @response.origin = "https://evil.com"
+
+    error = assert_raises(ActionPack::WebAuthn::InvalidResponseError) do
+      @response.validate!
     end
 
     assert_equal "Origin does not match", error.message
@@ -71,11 +81,13 @@ class ActionPack::WebAuthn::Authenticator::ResponseTest < ActiveSupport::TestCas
 
     response = TestableResponse.new(
       client_data_json: client_data_json,
-      authenticator_data: @authenticator_data
+      authenticator_data: @authenticator_data,
+      challenge: @challenge,
+      origin: @origin
     )
 
-    error = assert_raises(ActionPack::WebAuthn::Authenticator::Response::InvalidResponseError) do
-      response.validate!(challenge: @challenge, origin: @origin)
+    error = assert_raises(ActionPack::WebAuthn::InvalidResponseError) do
+      response.validate!
     end
 
     assert_equal "Cross-origin requests are not supported", error.message
@@ -89,17 +101,19 @@ class ActionPack::WebAuthn::Authenticator::ResponseTest < ActiveSupport::TestCas
     bytes = []
     bytes.concat(rp_id_hash.bytes)
     bytes << flags
-    bytes.concat([sign_count].pack("N").bytes)
+    bytes.concat([ sign_count ].pack("N").bytes)
 
     wrong_rp_data = ActionPack::WebAuthn::Authenticator::Data.decode(bytes.pack("C*"))
 
     response = TestableResponse.new(
       client_data_json: @client_data_json,
-      authenticator_data: wrong_rp_data
+      authenticator_data: wrong_rp_data,
+      challenge: @challenge,
+      origin: @origin
     )
 
-    error = assert_raises(ActionPack::WebAuthn::Authenticator::Response::InvalidResponseError) do
-      response.validate!(challenge: @challenge, origin: @origin)
+    error = assert_raises(ActionPack::WebAuthn::InvalidResponseError) do
+      response.validate!
     end
 
     assert_equal "Relying party ID does not match", error.message
@@ -115,11 +129,13 @@ class ActionPack::WebAuthn::Authenticator::ResponseTest < ActiveSupport::TestCas
 
     response = TestableResponse.new(
       client_data_json: client_data_json,
-      authenticator_data: @authenticator_data
+      authenticator_data: @authenticator_data,
+      challenge: @challenge,
+      origin: @origin
     )
 
-    error = assert_raises(ActionPack::WebAuthn::Authenticator::Response::InvalidResponseError) do
-      response.validate!(challenge: @challenge, origin: @origin)
+    error = assert_raises(ActionPack::WebAuthn::InvalidResponseError) do
+      response.validate!
     end
 
     assert_equal "Token binding is not supported", error.message
@@ -134,7 +150,7 @@ class ActionPack::WebAuthn::Authenticator::ResponseTest < ActiveSupport::TestCas
       bytes = []
       bytes.concat(rp_id_hash.bytes)
       bytes << flags
-      bytes.concat([sign_count].pack("N").bytes)
+      bytes.concat([ sign_count ].pack("N").bytes)
 
       ActionPack::WebAuthn::Authenticator::Data.decode(bytes.pack("C*"))
     end

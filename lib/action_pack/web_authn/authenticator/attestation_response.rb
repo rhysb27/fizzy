@@ -8,13 +8,12 @@
 #
 #   response = ActionPack::WebAuthn::Authenticator::AttestationResponse.new(
 #     client_data_json: params[:response][:clientDataJSON],
-#     attestation_object: params[:response][:attestationObject]
-#   )
-#
-#   response.validate!(
-#     challenge: session[:registration_challenge],
+#     attestation_object: params[:response][:attestationObject],
+#     challenge: ActionPack::WebAuthn::Current.challenge,
 #     origin: "https://example.com"
 #   )
+#
+#   response.validate!
 #
 #   # Store the credential
 #   credential_id = response.attestation.credential_id
@@ -31,32 +30,39 @@
 class ActionPack::WebAuthn::Authenticator::AttestationResponse < ActionPack::WebAuthn::Authenticator::Response
   attr_reader :attestation_object
 
+  validate :client_data_type_must_be_create
+  validate :attestation_must_be_valid
+
   def initialize(attestation_object:, **attributes)
     super(**attributes)
     @attestation_object = attestation_object
   end
 
-  def validate!(**args)
-    super(**args)
-
-    unless client_data["type"] == "webauthn.create"
-      raise InvalidResponseError, "Client data type is not webauthn.create"
-    end
-
-    verifier = ActionPack::WebAuthn.attestation_verifiers[attestation.format]
-
-    unless verifier
-      raise InvalidResponseError, "Unsupported attestation format: #{attestation.format}"
-    end
-
-    verifier.verify!(attestation, client_data_json: client_data_json)
-  end
-
+  # Returns the decoded Attestation object, lazily parsed from the raw
+  # attestation object bytes.
   def attestation
-    @attestation ||= ActionPack::WebAuthn::Authenticator::Attestation.decode(attestation_object)
+    @attestation ||= ActionPack::WebAuthn::Authenticator::Attestation.wrap(attestation_object)
   end
 
+  # Returns the authenticator data extracted from the attestation object.
   def authenticator_data
     attestation.authenticator_data
   end
+
+  private
+    def client_data_type_must_be_create
+      unless client_data["type"] == "webauthn.create"
+        errors.add(:base, "Client data type is not webauthn.create")
+      end
+    end
+
+    def attestation_must_be_valid
+      verifier = ActionPack::WebAuthn.attestation_verifiers[attestation.format]
+
+      if verifier
+        verifier.verify!(attestation, client_data_json: client_data_json)
+      else
+        errors.add(:base, "Unsupported attestation format: #{attestation.format}")
+      end
+    end
 end
