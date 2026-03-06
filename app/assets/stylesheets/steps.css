@@ -6,10 +6,6 @@
     inline-size: auto;
   }
 
-  .step__checkbox {
-    --hover-color: var(--card-color);
-  }
-
   .step__content {
     --input-border-radius: 0;
     --input-border-size: 0;
