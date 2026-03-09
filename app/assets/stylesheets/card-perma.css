@@ -34,16 +34,6 @@
       }
     }
 
-    @media (max-width: 639px) {
-      &:has(.card__closed) {
-        padding-block-start: 4.5rem;
-
-        .card-perma__bg {
-          box-shadow: 0 -2rem 0 0 var(--color-container);
-        }
-      }
-    }
-
     @media (max-width: 799px) {
       --half-btn-height: 1.25rem;
       --padding-inline: 1.5ch;
@@ -225,8 +215,7 @@
 
     .card__closed {
       @media (max-width: 639px) {
-        inset: auto 0 100% auto;
-        translate: 0 30%;
+        inset: auto 0 3rem auto;
         scale: 75%;
       }
     }
