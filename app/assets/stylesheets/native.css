@@ -130,3 +130,9 @@
     display: none;
   }
 }
+
+[data-bridge-components~=stamp] {
+  [data-controller~=bridge--stamp] {
+    display: none;
+  }
+}
