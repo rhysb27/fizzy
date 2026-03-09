@@ -9,6 +9,14 @@ BridgeElement.prototype.getButton = function() {
   }
 }
 
+BridgeElement.prototype.getStamp = function() {
+  return {
+    title: this.title,
+    date: this.getDate(),
+    by: this.getBy()
+  }
+}
+
 BridgeElement.prototype.getIcon = function() {
   const url = this.bridgeAttribute(`icon-url`)
 
@@ -17,6 +25,14 @@ BridgeElement.prototype.getIcon = function() {
   }
 
   return null
+}
+
+BridgeElement.prototype.getDate = function() {
+  return this.bridgeAttribute(`date`) ?? null
+}
+
+BridgeElement.prototype.getBy = function() {
+  return this.bridgeAttribute(`by`) ?? null
 }
 
 BridgeElement.prototype.getDisplayTitle = function() {
