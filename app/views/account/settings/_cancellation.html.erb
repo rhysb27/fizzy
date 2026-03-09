@@ -29,16 +29,14 @@
           </p>
         </div>
 
-        <div>
-          <label class="flex gap justify-start txt-align-start margin-block-end-double">
-            <input type="checkbox" class="checkbox" data-toggle-enable-target="checkbox" data-action="change->toggle-enable#toggle">
-            I’ve read the above and want to continue
-          </label>
+        <label class="flex gap justify-start txt-align-start margin-block-end-double">
+          <input type="checkbox" class="checkbox" data-toggle-enable-target="checkbox" data-action="change->toggle-enable#toggle">
+          I’ve read the above and want to continue
+        </label>
 
-          <div class="flex gap justify-center margin-block-start">
-            <button type="button" class="btn" autofocus data-action="dialog#close">Not now</button>
-            <%= button_to "Delete my account", account_cancellation_path, method: :post, class: "btn btn--negative", disabled: true, form: { data: { action: "submit->dialog#close", turbo: false } }, data: { toggle_enable_target: "element" } %>
-          </div>
+        <div class="flex gap justify-center margin-block-start">
+          <button type="button" class="btn" autofocus data-action="dialog#close">Not now</button>
+          <%= button_to "Delete my account", account_cancellation_path, method: :post, class: "btn btn--negative", disabled: true, form: { data: { action: "submit->dialog#close", turbo: false } }, data: { toggle_enable_target: "element" } %>
         </div>
       </dialog>
     </div>
