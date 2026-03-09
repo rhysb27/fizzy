@@ -14,7 +14,6 @@ export default class extends BridgeComponent {
   }
 
   notifyBridgeOfConnect() {
-    console.log(this.bridgeElement.getStamp())
     this.send("connect", this.bridgeElement.getStamp())
   }
 }
