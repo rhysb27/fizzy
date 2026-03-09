@@ -13,7 +13,7 @@ BridgeElement.prototype.getStamp = function() {
   return {
     title: this.title,
     date: this.getDate(),
-    by: this.getBy()
+    closedBy: this.getClosedBy()
   }
 }
 
@@ -31,8 +31,8 @@ BridgeElement.prototype.getDate = function() {
   return this.bridgeAttribute("date") ?? null
 }
 
-BridgeElement.prototype.getBy = function() {
-  return this.bridgeAttribute("by") ?? null
+BridgeElement.prototype.getClosedBy = function() {
+  return this.bridgeAttribute("closed-by") ?? null
 }
 
 BridgeElement.prototype.getDisplayTitle = function() {

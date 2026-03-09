@@ -3,7 +3,7 @@
     controller: "bridge--stamp",
     bridge_title: "Not Now",
     bridge_date: card.postponed_at.strftime("%b %d, %Y"),
-    bridge_by: card.postponed_by&.familiar_name
+    bridge_closed_by: card.postponed_by&.familiar_name
   } do %>
     <span class="card__closed-title" data-text="Not Now">Not Now</span>
     <strong class="card__closed-date"><%= card.postponed_at.strftime("%b %d, %Y") %></strong>
@@ -16,7 +16,7 @@
     controller: "bridge--stamp",
     bridge_title: "Done",
     bridge_date: card.closed_at.strftime("%b %d, %Y"),
-    bridge_by: card.closed_by.familiar_name
+    bridge_closed_by: card.closed_by.familiar_name
   } do %>
     <span class="card__closed-title" data-text="Done">Done</span>
     <strong class="card__closed-date"><%= card.closed_at.strftime("%b %d, %Y") %></strong>
