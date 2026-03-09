@@ -5,10 +5,10 @@
       <div>Permanently delete this account and all its data, including users, boards, and cards.</div>
     </header>
 
-    <div data-controller="dialog" data-dialog-modal-value="true">
+    <div data-controller="dialog toggle-enable" data-dialog-modal-value="true">
       <button type="button" class="btn btn--negative" data-action="dialog#open">Delete account...</button>
 
-      <dialog class="dialog panel panel--wide shadow" data-dialog-target="dialog" style="--panel-size: 48ch;">
+      <dialog class="dialog panel panel--wide shadow" data-dialog-target="dialog" data-action="close->toggle-enable#reset" style="--panel-size: 48ch;">
         <h2 class="margin-none txt-large txt-negative">Delete account</h2>
         <div class="txt-align-start">
           <h3 class="margin-block-start margin-block-end-half txt-normal">What happens next:</h3>
@@ -29,9 +29,9 @@
           </p>
         </div>
 
-        <div data-controller="toggle-enable">
+        <div>
           <label class="flex gap justify-start txt-align-start margin-block-end-double">
-            <input type="checkbox" class="checkbox" data-action="change->toggle-enable#toggle">
+            <input type="checkbox" class="checkbox" data-toggle-enable-target="checkbox" data-action="change->toggle-enable#toggle">
             I’ve read the above and want to continue
           </label>
 
