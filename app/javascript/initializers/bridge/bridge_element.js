@@ -5,7 +5,8 @@ BridgeElement.prototype.getButton = function() {
     title: this.title,
     icon: this.getIcon(),
     displayTitle: this.getDisplayTitle(),
-    displayAsPrimaryAction: this.getDisplayAsPrimaryAction()
+    displayAsPrimaryAction: this.getDisplayAsPrimaryAction(),
+    slot: this.getSlot()
   }
 }
 
@@ -25,4 +26,8 @@ BridgeElement.prototype.getDisplayTitle = function() {
 
 BridgeElement.prototype.getDisplayAsPrimaryAction = function() {
   return !!this.bridgeAttribute("display-as-primary-action")
+}
+
+BridgeElement.prototype.getSlot = function () {
+  return this.bridgeAttribute("slot") ?? "right"
 }
