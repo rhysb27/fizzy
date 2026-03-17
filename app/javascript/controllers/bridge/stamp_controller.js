@@ -5,22 +5,40 @@ export default class extends BridgeComponent {
   static values = { scopeSelector: { type: String, default: "body" } }
 
   connect() {
+    super.connect()
+
     if (this.element.closest(this.scopeSelectorValue)) {
-      super.connect()
-      this.send("connect", this.#data)
+      this.notifyBridgeOfConnect()
+      this.#observeStamp()
     }
   }
 
   disconnect() {
     super.disconnect()
+    this.notifyBridgeOfDisconnect()
+    this.stampObserver?.disconnect()
+  }
+
+  notifyBridgeOfConnect() {
+    const bridgeElement = this.bridgeElement
+
+    this.send("connect", {
+      title: bridgeElement.title,
+      description: bridgeElement.bridgeAttribute("description")
+    })
+  }
+
+  notifyBridgeOfDisconnect() {
     this.send("disconnect")
   }
 
-  get #data() {
-    const bridgeElement = this.bridgeElement
-    return {
-      title: bridgeElement.title,
-      description: bridgeElement.bridgeAttribute("description") ?? null
-    }
+  #observeStamp() {
+    this.stampObserver = new MutationObserver(() => {
+      this.notifyBridgeOfConnect()
+    })
+
+    this.stampObserver.observe(this.element, {
+      attributes: true
+    })
   }
 }
