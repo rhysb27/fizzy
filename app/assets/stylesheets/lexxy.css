@@ -120,6 +120,10 @@
     margin-block: 1em;
   }
 
+  .lexxy-prompt-menu {
+    max-inline-size: min(35ch, calc(100% - var(--lexxy-prompt-offset-x)));
+  }
+
   /* Content
   /* ------------------------------------------------------------------------ */
 
