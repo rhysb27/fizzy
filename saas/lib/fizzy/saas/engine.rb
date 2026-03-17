@@ -133,14 +133,10 @@ module Fizzy
       end
 
       config.to_prepare do
-        ::Account.include Account::StorageLimited
         ::Identity.include Authorization::Identity, Identity::Devices
         ::Session.include Session::Devices
         ::Signup.prepend Signup
         ApplicationController.include Authorization::Controller
-        CardsController.include(Card::StorageLimited::Creation)
-        Cards::CommentsController.include(Card::StorageLimited::Commenting)
-        Cards::PublishesController.include(Card::StorageLimited::Publishing)
 
         Notification.register_push_target(:native)
 
