@@ -1,0 +1,5 @@
+<% if Current.account.nearing_storage_limit? %>
+  <div class="full-width pad-inline center margin-block-half txt-small txt-ink-medium">
+    This account has used <%= number_to_human_size(Current.account.bytes_used) %> of <%= number_to_human_size(Account::StorageLimited::STORAGE_LIMIT) %> storage.
+  </div>
+<% end %>
