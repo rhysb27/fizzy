@@ -14,6 +14,14 @@ export default class extends BridgeComponent {
   }
 
   notifyBridgeOfConnect() {
-    this.send("connect", this.bridgeElement.getStamp())
+    this.send("connect", this.#data)
+  }
+
+  get #data() {
+    const bridgeElement = this.bridgeElement
+    return {
+      title: bridgeElement.title,
+      description: bridgeElement.bridgeAttribute("description") ?? null
+    }
   }
 }
