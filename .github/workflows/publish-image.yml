@@ -12,12 +12,6 @@ concurrency:
   group: publish-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
-  attestations: write
-
 env:
   IMAGE_DESCRIPTION: Fizzy is Kanban as it should be. Not as it has been.
   SOURCE_URL: https://github.com/${{ github.repository }}
@@ -27,6 +21,11 @@ jobs:
     name: Build and push image (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -113,6 +112,9 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      packages: write
+      id-token: write
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
