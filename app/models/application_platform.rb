@@ -82,7 +82,7 @@ class ApplicationPlatform < PlatformAgent
   private
     def extract_list_from_native_user_agent(prefix)
       if native?
-        user_agent.to_s.match(/#{prefix}: \[(.+)\]/) { |matches| matches[1] }.to_s
+        user_agent.to_s.match(/#{Regexp.escape(prefix)}: \[(.*?)\]/) { |matches| matches[1] }.to_s
       else
         ""
       end
