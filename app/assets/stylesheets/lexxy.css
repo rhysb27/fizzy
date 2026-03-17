@@ -202,4 +202,15 @@
       }
     }
   }
+
+  action-text-attachment[content-type^='application/vnd.actiontext'] {
+    lexxy-node-delete-button {
+      inset-inline-start: -0.25ch;
+
+      .lexxy-floating-controls__group {
+        background-color: oklch(var(--lch-blue-dark));
+        border-radius: 50%;
+      }
+    }
+  }
 }
