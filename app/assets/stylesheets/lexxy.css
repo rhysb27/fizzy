@@ -188,4 +188,18 @@
   .attachment {
     margin-inline: 0;
   }
+
+  .attachment-gallery {
+    .attachment {
+      display: inline-block;
+      inline-size: calc(33.333% - 0.8ch);
+    }
+
+    &.attachment-gallery--2,
+    &.attachment-gallery--4 {
+      .attachment {
+        inline-size: calc(50% - 0.8ch);
+      }
+    }
+  }
 }
