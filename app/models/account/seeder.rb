@@ -36,7 +36,7 @@ class Account::Seeder
       # TODO: Replace the video here with a screencap of creating a passkey
       playground.cards.create! creator: creator, title: "Then, set up a Passkey", status: "published", description: <<~HTML
         <p>Passkeys let you sign in securely without using passwords or email codes. To set one up, open the Fizzy menu and go to “<b><strong>My Profile > Manage Passkeys</b></strong>”. Using a passkey is optional, but recommended.</p>
-        <action-text-attachment url="https://videos.37signals.com/fizzy/assets/images/invite-link.gif" alt="Demo of adding a passkey" caption="Create a passkey to sign in without passwords or email codes" content-type="image/*" filename="invite-link.gif" presentation="gallery"></action-text-attachment>
+        <action-text-attachment url="https://videos.37signals.com/fizzy/assets/videos/creating_a_passkey.mp4" alt="Demo of adding a passkey" caption="Create a passkey to sign in without passwords or email codes" content-type="video/mp4" filename="creating_a_passkey.mp4"></action-text-attachment>
       HTML
 
       playground.cards.create! creator: creator, title: "Now, grab the invite link to invite someone else", status: "published", description: <<~HTML
