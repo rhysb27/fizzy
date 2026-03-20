@@ -1,7 +1,6 @@
 module HtmlHelper
   def format_html(html)
-    @auto_link_scrubber ||= AutoLinkScrubber.new
-    Loofah::HTML5::DocumentFragment.parse(html).scrub!(@auto_link_scrubber).to_html.html_safe
+    Loofah::HTML5::DocumentFragment.parse(html).scrub!(AutoLinkScrubber.new).to_html.html_safe
   end
 
   def card_html_title(card)
