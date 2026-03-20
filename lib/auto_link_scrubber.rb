@@ -18,6 +18,8 @@ class AutoLinkScrubber < Loofah::Scrubber
   TRAILING_PUNCTUATION = %(.?,:!;"'<>)
   TRAILING_PUNCTUATION_REGEXP = /[#{Regexp.escape(TRAILING_PUNCTUATION)}]+\z/
 
+  MAX_TEXT_NODE_LENGTH = 10_000
+
   def initialize
     @direction = :top_down
     @regexp_timeout_reported = false
@@ -56,6 +58,8 @@ class AutoLinkScrubber < Loofah::Scrubber
     end
 
     def find_links(text)
+      return [] if text.length > MAX_TEXT_NODE_LENGTH
+
       links = []
 
       text.scan(AUTOLINK_REGEXP) do
