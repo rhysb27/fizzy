@@ -22,13 +22,12 @@ class AutoLinkScrubber < Loofah::Scrubber
 
   def initialize
     @direction = :top_down
-    @regexp_timeout_reported = false
   end
 
   def scrub(node)
     return Loofah::Scrubber::STOP if EXCLUDED_ELEMENTS.include?(node.name)
 
-    if node.text? && !@regexp_timeout_reported
+    if node.text?
       replacement = autolink_text_node(node)
       node.replace(replacement) if replacement
     end
@@ -78,7 +77,6 @@ class AutoLinkScrubber < Loofah::Scrubber
       links
     rescue Regexp::TimeoutError => error
       Sentry.capture_exception error if Fizzy.saas?
-      @regexp_timeout_reported = true
       []
     end
 
