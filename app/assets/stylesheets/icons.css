@@ -28,6 +28,7 @@
   .icon--assigned { --svg: url("assigned.svg "); }
   .icon--attachment { --svg: url("attachment.svg "); }
   .icon--authentication { --svg: url("authentication.svg "); }
+  .icon--basecamp { --svg: url("basecamp.svg"); }
   .icon--bell-alert { --svg: url("bell-alert.svg "); }
   .icon--bell-off { --svg: url("bell-off.svg "); }
   .icon--bell { --svg: url("bell.svg "); }
@@ -60,6 +61,7 @@
   .icon--fizzy { --svg: url("fizzy.svg"); }
   .icon--globe { --svg: url("globe.svg "); }
   .icon--golden-ticket { --svg: url("golden-ticket.svg "); }
+  .icon--hey { --svg: url("hey.svg"); }
   .icon--history { --svg: url("history.svg "); }
   .icon--home { --svg: url("home.svg "); }
   .icon--install-edge { --svg: url("install-edge.svg "); }
