@@ -8,7 +8,7 @@
 # Generate options for the browser's +navigator.credentials.create()+ call, then register the
 # response:
 #
-#   options = ActionPack::Passkey.creation_options(holder: current_user)
+#   options = ActionPack::Passkey.registration_options(holder: current_user)
 #   # Pass options to the browser
 #
 #   passkey = ActionPack::Passkey.register(params[:passkey], holder: current_user)
@@ -35,12 +35,12 @@ class ActionPack::Passkey < Rails.configuration.action_pack.passkey.parent_class
   class << self
     # Returns a CreationOptions object for the given +holder+, suitable for passing to the
     # browser's +navigator.credentials.create()+ call. Merges global defaults from the Rails
-    # configuration, holder-specific options from +holder.passkey_creation_options+, and any
+    # configuration, holder-specific options from +holder.passkey_registration_options+, and any
     # additional +options+ overrides.
-    def creation_options(holder:, **options)
+    def registration_options(holder:, **options)
       ActionPack::WebAuthn::PublicKeyCredential.creation_options(
         **Rails.configuration.action_pack.web_authn.default_creation_options.to_h,
-        **holder.passkey_creation_options.to_h,
+        **holder.passkey_registration_options.to_h,
         **options
       )
     end

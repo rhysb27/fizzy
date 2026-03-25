@@ -1,6 +1,6 @@
 // Web components for the ActionPack::Passkey Ruby helpers.
 //
-// <rails-passkey-creation-button> — wraps a registration ceremony form
+// <rails-passkey-registration-button> — wraps a registration ceremony form
 // <rails-passkey-sign-in-button>  — wraps an authentication ceremony form
 //
 // The Ruby form helpers render the component markup including the inner form,
@@ -92,13 +92,13 @@ class PasskeyButton extends HTMLElement {
   }
 }
 
-class PasskeyCreationButton extends PasskeyButton {
+class PasskeyRegistrationButton extends PasskeyButton {
   async perform(options) {
     return await register(options)
   }
 
   fillForm(passkey) {
-    fillCreateForm(this.form, passkey)
+    fillRegistrationForm(this.form, passkey)
   }
 }
 
@@ -148,7 +148,7 @@ class PasskeySignInButton extends PasskeyButton {
   }
 }
 
-customElements.define("rails-passkey-creation-button", PasskeyCreationButton)
+customElements.define("rails-passkey-registration-button", PasskeyRegistrationButton)
 customElements.define("rails-passkey-sign-in-button", PasskeySignInButton)
 
 // -- Shared helpers ----------------------------------------------------------
@@ -176,7 +176,7 @@ async function refreshChallenge(options, challengeUrl) {
   options.challenge = challenge
 }
 
-function fillCreateForm(form, passkey) {
+function fillRegistrationForm(form, passkey) {
   form.querySelector('[data-passkey-field="client_data_json"]').value = passkey.client_data_json
   form.querySelector('[data-passkey-field="attestation_object"]').value = passkey.attestation_object
 

@@ -10,12 +10,12 @@
 #     include ActionPack::Passkey::Request
 #
 #     def new
-#       @creation_options = passkey_creation_options(holder: Current.user)
+#       @registration_options = passkey_registration_options(holder: Current.user)
 #     end
 #
 #     def create
 #       @passkey = ActionPack::Passkey.register(
-#         passkey_creation_params, holder: Current.user
+#         passkey_registration_params, holder: Current.user
 #       )
 #       redirect_to settings_path
 #     end
@@ -56,7 +56,7 @@ module ActionPack::Passkey::Request
   end
 
   # Returns strong parameters for the passkey registration ceremony.
-  def passkey_creation_params(param: :passkey)
+  def passkey_registration_params(param: :passkey)
     params.expect(param => [ :client_data_json, :attestation_object, transports: [] ])
   end
 
@@ -70,8 +70,8 @@ module ActionPack::Passkey::Request
     ActionPack::Passkey.request_options(**options)
   end
 
-  # Returns CreationOptions for the registration ceremony.
-  def passkey_creation_options(**options)
-    ActionPack::Passkey.creation_options(**options)
+  # Returns RegistrationOptions for the registration ceremony.
+  def passkey_registration_options(**options)
+    ActionPack::Passkey.registration_options(**options)
   end
 end
