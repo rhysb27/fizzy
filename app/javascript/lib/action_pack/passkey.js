@@ -14,34 +14,37 @@
 //   passkey:error   — ceremony failed; detail: { error, cancelled }
 //
 // Attributes (rendered by the Ruby form helpers):
-//   creation-options — JSON WebAuthn creation options (on rails-passkey-creation-button)
-//   request-options  — JSON WebAuthn request options (on rails-passkey-sign-in-button)
-//   challenge-url    — endpoint to refresh the challenge nonce (on both)
-//   mediation        — WebAuthn mediation hint, e.g. "conditional" (on rails-passkey-sign-in-button)
+//   options       — JSON WebAuthn options (creation or request, on both)
+//   challenge-url — endpoint to refresh the challenge nonce (on both)
+//   mediation     — WebAuthn mediation hint, e.g. "conditional" (on rails-passkey-sign-in-button)
 
 import { register, authenticate } from "lib/action_pack/webauthn"
 
-class PasskeyCreationButton extends HTMLElement {
+// Base class for passkey web components. Manages the shared ceremony lifecycle:
+// challenge refresh, button state, error display, and event dispatch.
+// Subclasses implement `perform()` to run the specific WebAuthn ceremony
+// and `fillForm()` to populate hidden fields before submission.
+class PasskeyButton extends HTMLElement {
   connectedCallback() {
-    this.button.addEventListener("click", this.#create)
+    this.button.addEventListener("click", this.#perform)
   }
 
   disconnectedCallback() {
-    this.button.removeEventListener("click", this.#create)
+    this.button.removeEventListener("click", this.#perform)
     this.button.disabled = false
-    delete this.dataset.passkeyErrorState
+    this.#hideErrors()
   }
 
   get button() {
-    return this.querySelector("[data-passkey='create']")
+    return this.querySelector("[data-passkey]")
   }
 
   get form() {
     return this.querySelector("form")
   }
 
-  get creationOptions() {
-    return JSON.parse(this.getAttribute("creation-options"))
+  get options() {
+    return JSON.parse(this.getAttribute("options"))
   }
 
   get challengeUrl() {
@@ -49,20 +52,22 @@ class PasskeyCreationButton extends HTMLElement {
   }
 
   // Arrow function to preserve `this` binding for addEventListener/removeEventListener.
-  #create = async () => {
+  #perform = async () => {
     this.button.disabled = true
+    this.#hideErrors()
     this.button.dispatchEvent(new CustomEvent("passkey:start", { bubbles: true }))
 
     try {
-      if (!passkeysAvailable()) throw new Error("Passkeys are not supported by this browser")
-      if (!this.creationOptions) throw new Error("Missing passkey creation options")
+      const options = this.options
 
-      const options = this.creationOptions
+      if (!passkeysAvailable()) throw new Error("Passkeys are not supported by this browser")
+      if (!options) throw new Error("Missing passkey options")
+
       await refreshChallenge(options, this.challengeUrl)
-      const passkey = await register(options)
+      const passkey = await this.perform(options)
 
       this.button.dispatchEvent(new CustomEvent("passkey:success", { bubbles: true }))
-      fillCreateForm(this.form, passkey)
+      this.fillForm(passkey)
       this.form.submit()
     } catch (error) {
       this.button.disabled = false
@@ -71,96 +76,75 @@ class PasskeyCreationButton extends HTMLElement {
   }
 
   #handleError(error) {
+    console.error("Passkey ceremony failed", error)
     const cancelled = error.name === "AbortError" || error.name === "NotAllowedError"
-    this.dataset.passkeyErrorState = cancelled ? "cancelled" : "error"
+    this.#showError(cancelled ? "cancelled" : "error")
     this.button.dispatchEvent(new CustomEvent("passkey:error", { bubbles: true, detail: { error, cancelled } }))
+  }
+
+  #showError(type) {
+    const el = this.querySelector(`[data-passkey-error="${type}"]`)
+    if (el) el.hidden = false
+  }
+
+  #hideErrors() {
+    for (const el of this.querySelectorAll("[data-passkey-error]")) el.hidden = true
   }
 }
 
-class PasskeySignInButton extends HTMLElement {
+class PasskeyCreationButton extends PasskeyButton {
+  async perform(options) {
+    return await register(options)
+  }
+
+  fillForm(passkey) {
+    fillCreateForm(this.form, passkey)
+  }
+}
+
+class PasskeySignInButton extends PasskeyButton {
   connectedCallback() {
-    this.button.addEventListener("click", this.#signIn)
-
+    super.connectedCallback()
     if (this.mediation === "conditional") this.#attemptConditionalMediation()
-  }
-
-  disconnectedCallback() {
-    this.button.removeEventListener("click", this.#signIn)
-    this.button.disabled = false
-    delete this.dataset.passkeyErrorState
-  }
-
-  get button() {
-    return this.querySelector("[data-passkey='sign_in']")
-  }
-
-  get form() {
-    return this.querySelector("form")
-  }
-
-  get requestOptions() {
-    return JSON.parse(this.getAttribute("request-options"))
-  }
-
-  get challengeUrl() {
-    return this.getAttribute("challenge-url")
   }
 
   get mediation() {
     return this.getAttribute("mediation")
   }
 
-  // Arrow function to preserve `this` binding for addEventListener/removeEventListener.
-  #signIn = async () => {
-    this.button.disabled = true
-    this.button.dispatchEvent(new CustomEvent("passkey:start", { bubbles: true }))
+  async perform(options, { mediation } = {}) {
+    return await authenticate(options, { mediation })
+  }
 
-    try {
-      if (!passkeysAvailable()) throw new Error("Passkeys are not supported by this browser")
-      if (!this.requestOptions) throw new Error("Missing passkey request options")
-
-      const options = this.requestOptions
-      await refreshChallenge(options, this.challengeUrl)
-      const passkey = await authenticate(options)
-
-      this.button.dispatchEvent(new CustomEvent("passkey:success", { bubbles: true }))
-      fillSignInForm(this.form, passkey)
-      this.form.submit()
-    } catch (error) {
-      this.button.disabled = false
-      this.#handleError(error)
-    }
+  fillForm(passkey) {
+    fillSignInForm(this.form, passkey)
   }
 
   async #attemptConditionalMediation() {
     if (await this.#conditionalMediationAvailable()) {
-      const options = this.requestOptions
+      const options = this.options
 
       this.form.dispatchEvent(new CustomEvent("passkey:start", { bubbles: true }))
 
       try {
         await refreshChallenge(options, this.challengeUrl)
-        const passkey = await authenticate(options, { mediation: this.mediation })
+        const passkey = await this.perform(options, { mediation: this.mediation })
 
         this.form.dispatchEvent(new CustomEvent("passkey:success", { bubbles: true }))
-        fillSignInForm(this.form, passkey)
+        this.fillForm(passkey)
         this.form.submit()
       } catch (error) {
-        this.#handleError(error)
+        console.error("Passkey conditional mediation failed", error)
+        const cancelled = error.name === "AbortError" || error.name === "NotAllowedError"
+        this.button.dispatchEvent(new CustomEvent("passkey:error", { bubbles: true, detail: { error, cancelled } }))
       }
     }
   }
 
   async #conditionalMediationAvailable() {
-    return this.requestOptions &&
+    return this.options &&
            passkeysAvailable() &&
            await window.PublicKeyCredential.isConditionalMediationAvailable?.()
-  }
-
-  #handleError(error) {
-    const cancelled = error.name === "AbortError" || error.name === "NotAllowedError"
-    this.dataset.passkeyErrorState = cancelled ? "cancelled" : "error"
-    this.button.dispatchEvent(new CustomEvent("passkey:error", { bubbles: true, detail: { error, cancelled } }))
   }
 }
 

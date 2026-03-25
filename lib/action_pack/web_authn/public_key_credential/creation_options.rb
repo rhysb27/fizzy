@@ -67,7 +67,7 @@ class ActionPack::WebAuthn::PublicKeyCredential::CreationOptions < ActionPack::W
 
   # Returns a Hash suitable for JSON serialization and passing to the
   # WebAuthn JavaScript API.
-  def as_json(*)
+  def as_json(options = {})
     json = {
       challenge: challenge,
       rp: relying_party.as_json,
@@ -96,7 +96,7 @@ class ActionPack::WebAuthn::PublicKeyCredential::CreationOptions < ActionPack::W
       json[:attestation] = attestation.to_s
     end
 
-    json
+    json.as_json(options)
   end
 
   private

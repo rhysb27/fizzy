@@ -34,13 +34,13 @@ class ActionPack::WebAuthn::PublicKeyCredential::RequestOptions < ActionPack::We
 
   # Returns a Hash suitable for JSON serialization and passing to the
   # WebAuthn JavaScript API.
-  def as_json(*)
+  def as_json(options = {})
     {
       challenge: challenge,
       rpId: relying_party.id,
       allowCredentials: credentials.map { |credential| allow_credential_json(credential) },
       userVerification: user_verification.to_s
-    }
+    }.as_json(options)
   end
 
   private
