@@ -53,6 +53,7 @@ class ActionPack::WebAuthn::PublicKeyCredential::CreationOptions < ActionPack::W
   attribute :exclude_credentials, default: -> { [] }
   attribute :attestation, default: :none
   attribute :challenge_expiration, default: -> { Rails.configuration.action_pack.web_authn.creation_challenge_expiration }
+  attribute :challenge_purpose, default: "registration"
 
   validates :id, :name, :display_name, presence: true
   validates :resident_key, inclusion: { in: RESIDENT_KEY_OPTIONS }

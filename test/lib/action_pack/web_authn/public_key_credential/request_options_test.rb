@@ -24,7 +24,7 @@ class ActionPack::WebAuthn::PublicKeyCredential::RequestOptionsTest < ActiveSupp
 
   test "generates signed challenge containing nonce" do
     signed_message = Base64.urlsafe_decode64(@options.challenge)
-    nonce = ActionPack::WebAuthn.challenge_verifier.verified(signed_message)
+    nonce = ActionPack::WebAuthn.challenge_verifier.verified(signed_message, purpose: "authentication")
 
     assert_not_nil nonce
     assert_equal 32, Base64.strict_decode64(nonce).bytesize

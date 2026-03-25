@@ -49,6 +49,10 @@ class ActionPack::WebAuthn::Authenticator::AttestationResponse < ActionPack::Web
   end
 
   private
+    def challenge_purpose
+      "registration"
+    end
+
     def client_data_type_must_be_create
       unless client_data["type"] == "webauthn.create"
         errors.add(:base, "Client data type is not webauthn.create")

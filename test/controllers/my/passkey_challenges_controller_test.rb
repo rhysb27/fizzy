@@ -32,10 +32,10 @@ class My::PasskeyChallengesControllerTest < ActionDispatch::IntegrationTest
       signed_message = Base64.urlsafe_decode64(challenge)
 
       travel Rails.configuration.action_pack.web_authn.creation_challenge_expiration - 1.second
-      assert ActionPack::WebAuthn.challenge_verifier.verified(signed_message)
+      assert ActionPack::WebAuthn.challenge_verifier.verified(signed_message, purpose: "registration")
 
       travel 2.seconds
-      assert_nil ActionPack::WebAuthn.challenge_verifier.verified(signed_message)
+      assert_nil ActionPack::WebAuthn.challenge_verifier.verified(signed_message, purpose: "registration")
     end
   end
 
@@ -49,10 +49,10 @@ class My::PasskeyChallengesControllerTest < ActionDispatch::IntegrationTest
       signed_message = Base64.urlsafe_decode64(challenge)
 
       travel Rails.configuration.action_pack.web_authn.request_challenge_expiration - 1.second
-      assert ActionPack::WebAuthn.challenge_verifier.verified(signed_message)
+      assert ActionPack::WebAuthn.challenge_verifier.verified(signed_message, purpose: "authentication")
 
       travel 2.seconds
-      assert_nil ActionPack::WebAuthn.challenge_verifier.verified(signed_message)
+      assert_nil ActionPack::WebAuthn.challenge_verifier.verified(signed_message, purpose: "authentication")
     end
   end
 end

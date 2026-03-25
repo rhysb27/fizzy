@@ -28,14 +28,19 @@ class ActionPack::Passkey::ChallengesController < ActionController::Base
   private
     def create_passkey_challenge
       ActionPack::WebAuthn::PublicKeyCredential::Options.new(
-        challenge_expiration: challenge_expiration
+        challenge_expiration: challenge_expiration,
+        challenge_purpose: challenge_purpose
       ).challenge
+    end
+
+    def challenge_purpose
+      params[:purpose] == "registration" ? "registration" : "authentication"
     end
 
     def challenge_expiration
       config = Rails.configuration.action_pack.web_authn
 
-      if params[:purpose] == "registration"
+      if challenge_purpose == "registration"
         config.creation_challenge_expiration
       else
         config.request_challenge_expiration

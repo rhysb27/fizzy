@@ -85,11 +85,15 @@ class ActionPack::WebAuthn::Authenticator::Response
 
       signed_message = Base64.urlsafe_decode64(client_data["challenge"])
 
-      unless ActionPack::WebAuthn.challenge_verifier.verified(signed_message)
+      unless ActionPack::WebAuthn.challenge_verifier.verified(signed_message, purpose: challenge_purpose)
         errors.add(:base, "Challenge has expired")
       end
     rescue ArgumentError
       errors.add(:base, "Challenge is invalid")
+    end
+
+    def challenge_purpose
+      nil
     end
 
     def origin_must_match

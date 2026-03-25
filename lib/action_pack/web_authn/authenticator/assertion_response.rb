@@ -47,6 +47,10 @@ class ActionPack::WebAuthn::Authenticator::AssertionResponse < ActionPack::WebAu
   end
 
   private
+    def challenge_purpose
+      "authentication"
+    end
+
     def client_data_type_must_be_get
       unless client_data["type"] == "webauthn.get"
         errors.add(:base, "Client data type is not webauthn.get")

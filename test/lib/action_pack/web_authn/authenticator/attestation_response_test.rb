@@ -37,7 +37,7 @@ class ActionPack::WebAuthn::Authenticator::AttestationResponseTest < ActiveSuppo
   setup do
     ActionPack::WebAuthn::Current.host = "example.com"
 
-    @challenge = webauthn_challenge
+    @challenge = webauthn_challenge(purpose: "registration")
     @origin = "https://example.com"
     @client_data_json = {
       challenge: @challenge,
