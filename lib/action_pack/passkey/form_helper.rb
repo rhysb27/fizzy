@@ -30,7 +30,7 @@ module ActionPack::Passkey::FormHelper
   # - All other options are passed to the +<button>+ tag
   def passkey_registration_button(name = nil, url = nil, **options, &block)
     url, name = name, block ? capture(&block) : nil if block_given?
-    component_options, form_options, button_options, error_options = extract_passkey_component_options(url, options)
+    component_options, form_options, button_options, error_options = partition_passkey_options(url, options)
     error_options[:error][:message] ||= REGISTRATION_ERROR_MESSAGE
     error_options[:cancellation][:message] ||= REGISTRATION_CANCELLED_MESSAGE
     param = form_options.delete(:param)
@@ -64,7 +64,7 @@ module ActionPack::Passkey::FormHelper
   # - All other options are passed to the +<button>+ tag
   def passkey_sign_in_button(name = nil, url = nil, **options, &block)
     url, name = name, block ? capture(&block) : nil if block_given?
-    component_options, form_options, button_options, error_options = extract_passkey_component_options(url, options)
+    component_options, form_options, button_options, error_options = partition_passkey_options(url, options)
     error_options[:error][:message] ||= SIGN_IN_ERROR_MESSAGE
     error_options[:cancellation][:message] ||= SIGN_IN_CANCELLED_MESSAGE
     param = form_options.delete(:param)
@@ -82,7 +82,7 @@ module ActionPack::Passkey::FormHelper
   end
 
   private
-    def extract_passkey_component_options(url, options)
+    def partition_passkey_options(url, options)
       passkey_options = options.fetch(:options, {})
 
       component_options = options
