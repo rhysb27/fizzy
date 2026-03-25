@@ -20,7 +20,7 @@ class ActionPack::PasskeyTest < ActiveSupport::TestCase
     challenge = ActionPack::Passkey.request_options(credentials: [ @passkey ]).challenge
     assertion = build_assertion(challenge: challenge)
 
-    result = @passkey.authenticate(assertion, challenge: challenge)
+    result = @passkey.authenticate(assertion)
 
     assert_equal @passkey, result
   end
@@ -30,14 +30,14 @@ class ActionPack::PasskeyTest < ActiveSupport::TestCase
     assertion = build_assertion(challenge: challenge)
     assertion[:signature] = Base64.urlsafe_encode64("invalid", padding: false)
 
-    assert_nil @passkey.authenticate(assertion, challenge: challenge)
+    assert_nil @passkey.authenticate(assertion)
   end
 
   test "authenticate updates sign count and backed_up" do
     challenge = ActionPack::Passkey.request_options(credentials: [ @passkey ]).challenge
     assertion = build_assertion(challenge: challenge, sign_count: 5, backed_up: true)
 
-    @passkey.authenticate(assertion, challenge: challenge)
+    @passkey.authenticate(assertion)
 
     assert_equal 5, @passkey.reload.sign_count
     assert @passkey.backed_up?

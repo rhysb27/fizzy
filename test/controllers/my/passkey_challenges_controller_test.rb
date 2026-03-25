@@ -10,15 +10,6 @@ class My::PasskeyChallengesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "stores challenge in cookie" do
-    untenanted do
-      post my_passkey_challenge_url
-
-      jar = ActionDispatch::Cookies::CookieJar.build(request, cookies.to_hash)
-      assert_equal response.parsed_body["challenge"], jar.encrypted[ActionPack::Passkey::ChallengesController::COOKIE_NAME]
-    end
-  end
-
   test "returns a different challenge each time" do
     untenanted do
       post my_passkey_challenge_url
