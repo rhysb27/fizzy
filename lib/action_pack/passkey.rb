@@ -18,7 +18,7 @@
 # Generate options for the browser's +navigator.credentials.get()+ call, then authenticate the
 # response:
 #
-#   options = ActionPack::Passkey.request_options
+#   options = ActionPack::Passkey.authentication_options
 #   # Pass options to the browser
 #
 #   passkey = ActionPack::Passkey.authenticate(params[:passkey])
@@ -62,10 +62,10 @@ class ActionPack::Passkey < Rails.configuration.action_pack.passkey.parent_class
     # +navigator.credentials.get()+ call. When a +holder+ is provided, their existing credentials
     # are included so the browser can offer them for selection. Merges global defaults, holder
     # options, and any additional +options+ overrides.
-    def request_options(holder: nil, **options)
+    def authentication_options(holder: nil, **options)
       ActionPack::WebAuthn::PublicKeyCredential.request_options(
         **Rails.configuration.action_pack.web_authn.default_request_options.to_h,
-        **holder&.passkey_request_options.to_h,
+        **holder&.passkey_authentication_options.to_h,
         **options
       )
     end

@@ -22,7 +22,7 @@
     </button>
   <% end %>
 
-  <%= passkey_sign_in_button "Sign in with a passkey", session_passkey_path, options: @request_options, mediation: "conditional", class: "btn btn--link center txt-medium", hidden: true %>
+  <%= passkey_sign_in_button "Sign in with a passkey", session_passkey_path, options: @authentication_options, mediation: "conditional", class: "btn btn--link center txt-medium", hidden: true %>
 
 </div>
 

@@ -27,11 +27,11 @@
 #     include ActionPack::Passkey::Request
 #
 #     def new
-#       @request_options = passkey_request_options
+#       @authentication_options = passkey_authentication_options
 #     end
 #
 #     def create
-#       if passkey = ActionPack::Passkey.authenticate(passkey_request_params)
+#       if passkey = ActionPack::Passkey.authenticate(passkey_authentication_params)
 #         sign_in passkey.holder
 #         redirect_to root_path
 #       else
@@ -61,13 +61,13 @@ module ActionPack::Passkey::Request
   end
 
   # Returns strong parameters for the passkey authentication ceremony.
-  def passkey_request_params(param: :passkey)
+  def passkey_authentication_params(param: :passkey)
     params.expect(param => [ :id, :client_data_json, :authenticator_data, :signature ])
   end
 
   # Returns RequestOptions for the authentication ceremony.
-  def passkey_request_options(**options)
-    ActionPack::Passkey.request_options(**options)
+  def passkey_authentication_options(**options)
+    ActionPack::Passkey.authentication_options(**options)
   end
 
   # Returns RegistrationOptions for the registration ceremony.

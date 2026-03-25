@@ -10,7 +10,7 @@
 # model that supply holder-specific options for the WebAuthn ceremonies:
 #
 # - +passkey_registration_options+ — merged into ActionPack::Passkey.registration_options
-# - +passkey_request_options+ — merged into ActionPack::Passkey.request_options
+# - +passkey_authentication_options+ — merged into ActionPack::Passkey.authentication_options
 #
 # == Options
 #
@@ -32,14 +32,14 @@
 #
 #   has_passkeys do |config|
 #     config.registration_options { { name: email, display_name: name } }
-#     config.request_options  { { user_verification: "required" } }
+#     config.authentication_options { { user_verification: "required" } }
 #   end
 module ActionPack::Passkey::Holder
   extend ActiveSupport::Concern
 
   class_methods do
     # Declares that this model can hold passkeys. Sets up a polymorphic +has_many+ association
-    # and defines +passkey_registration_options+ and +passkey_request_options+ instance methods used
+    # and defines +passkey_registration_options+ and +passkey_authentication_options+ instance methods used
     # by ActionPack::Passkey to build ceremony options.
     #
     # Keyword arguments matching CreationOptions or RequestOptions fields are extracted and
@@ -61,8 +61,8 @@ module ActionPack::Passkey::Holder
         }.merge(config.evaluate_registration_options(self))
       end
 
-      define_method(:passkey_request_options) do
-        { credentials: public_send(config.association_name) }.merge(config.evaluate_request_options(self))
+      define_method(:passkey_authentication_options) do
+        { credentials: public_send(config.association_name) }.merge(config.evaluate_authentication_options(self))
       end
     end
   end
@@ -81,15 +81,15 @@ module ActionPack::Passkey::Holder
       end
 
       if request_opts = extract_options_for(ActionPack::WebAuthn::PublicKeyCredential::RequestOptions, options)
-        @request_options = options_to_proc(request_opts)
+        @authentication_options = options_to_proc(request_opts)
       end
     end
 
-    # Sets a block to evaluate in the holder's context to produce additional request options.
+    # Sets a block to evaluate in the holder's context to produce additional authentication options.
     #
-    #   config.request_options { { user_verification: "required" } }
-    def request_options(&block)
-      @request_options = block
+    #   config.authentication_options { { user_verification: "required" } }
+    def authentication_options(&block)
+      @authentication_options = block
     end
 
     # Sets a block to evaluate in the holder's context to produce additional creation options.
@@ -100,10 +100,10 @@ module ActionPack::Passkey::Holder
     end
 
     # Evaluates the request options block (if any) in the context of the given +record+. Called
-    # internally by the +passkey_request_options+ method defined on the holder.
-    def evaluate_request_options(record)
-      if @request_options
-        record.instance_exec(&@request_options)
+    # internally by the +passkey_authentication_options+ method defined on the holder.
+    def evaluate_authentication_options(record)
+      if @authentication_options
+        record.instance_exec(&@authentication_options)
       else
         {}
       end
