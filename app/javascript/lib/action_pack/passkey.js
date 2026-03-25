@@ -63,7 +63,7 @@ class PasskeyButton extends HTMLElement {
       if (!passkeysAvailable()) throw new Error("Passkeys are not supported by this browser")
       if (!options) throw new Error("Missing passkey options")
 
-      await refreshChallenge(options, this.challengeUrl)
+      await refreshChallenge(options, this.challengeUrl, this.purpose)
       const passkey = await this.perform(options)
 
       this.button.dispatchEvent(new CustomEvent("passkey:success", { bubbles: true }))
@@ -93,6 +93,8 @@ class PasskeyButton extends HTMLElement {
 }
 
 class PasskeyRegistrationButton extends PasskeyButton {
+  get purpose() { return "registration" }
+
   async perform(options) {
     return await register(options)
   }
@@ -103,6 +105,8 @@ class PasskeyRegistrationButton extends PasskeyButton {
 }
 
 class PasskeySignInButton extends PasskeyButton {
+  get purpose() { return "authentication" }
+
   connectedCallback() {
     super.connectedCallback()
     if (this.mediation === "conditional") this.#attemptConditionalMediation()
@@ -127,7 +131,7 @@ class PasskeySignInButton extends PasskeyButton {
       this.form.dispatchEvent(new CustomEvent("passkey:start", { bubbles: true }))
 
       try {
-        await refreshChallenge(options, this.challengeUrl)
+        await refreshChallenge(options, this.challengeUrl, this.purpose)
         const passkey = await this.perform(options, { mediation: this.mediation })
 
         this.form.dispatchEvent(new CustomEvent("passkey:success", { bubbles: true }))
@@ -157,9 +161,12 @@ function passkeysAvailable() {
   return !!window.PublicKeyCredential
 }
 
-async function refreshChallenge(options, challengeUrl) {
+async function refreshChallenge(options, challengeUrl, purpose) {
   if (!challengeUrl) throw new Error("Missing passkey challenge URL")
   const token = document.querySelector('meta[name="csrf-token"]')?.content
+
+  const body = new URLSearchParams()
+  if (purpose) body.append("purpose", purpose)
 
   const response = await fetch(challengeUrl, {
     method: "POST",
@@ -167,7 +174,8 @@ async function refreshChallenge(options, challengeUrl) {
     headers: {
       "X-CSRF-Token": token,
       "Accept": "application/json"
-    }
+    },
+    body
   })
 
   if (!response.ok) throw new Error("Failed to refresh challenge")
