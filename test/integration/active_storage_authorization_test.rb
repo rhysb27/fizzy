@@ -166,6 +166,14 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_includes response.headers["Cache-Control"], "public"
   end
 
+  test "representation proxy for non-public blob does not set public Cache-Control" do
+    sign_in_as :david
+
+    get rails_storage_proxy_path(@blob.representation(resize_to_limit: [ 100, 100 ]))
+    assert_response :success
+    assert_not_includes response.headers["Cache-Control"], "public"
+  end
+
   # Account exports
 
   test "export owner can download their export" do
