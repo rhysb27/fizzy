@@ -9,7 +9,7 @@
 module ActionPack::Passkey::FormHelper
   REGISTRATION_ERROR_MESSAGE = "Something went wrong while registering your passkey."
   REGISTRATION_CANCELLED_MESSAGE = "Passkey registration was cancelled. Try again when you are ready."
-  REGISTRATION_DUPLICATE_MESSAGE = "You already have a passkey registered on this device. Remove the existing one first to re-register."
+  REGISTRATION_DUPLICATE_MESSAGE = "You already have a passkey registered on this device. Remove the existing one first and try again."
   SIGN_IN_ERROR_MESSAGE = "Something went wrong while signing in with your passkey."
   SIGN_IN_CANCELLED_MESSAGE = "Passkey sign in was cancelled. Try again when you are ready."
 
