@@ -30,6 +30,7 @@ class PasskeyButton extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.abortConditionalMediation?.()
     this.button.removeEventListener("click", this.#perform)
     this.button.disabled = false
     this.#hideErrors()
