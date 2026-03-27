@@ -22,9 +22,14 @@
     </button>
   <% end %>
 
-  <p>
-    <%= passkey_sign_in_button "Sign in with a passkey", session_passkey_path, options: @authentication_options, mediation: "conditional", class: "btn btn--plain txt-link center txt-small" %>
-  </p>
+  <div class="margin-block-start">
+    <%= passkey_sign_in_button "Sign in with a passkey", session_passkey_path,
+          options: @authentication_options,
+          mediation: "conditional",
+          error: { class: "txt-negative margin-block-half" },
+          cancellation: { class: "txt-subtle margin-block-half" },
+          class: "btn btn--plain txt-link center txt-small" %>
+  </div>
 
 </div>
 
