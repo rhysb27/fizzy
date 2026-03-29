@@ -127,7 +127,7 @@ GIT
 GEM
   remote: https://rubygems.org/
   specs:
-    action_text-trix (2.1.17)
+    action_text-trix (2.1.18)
       railties
     addressable (2.8.9)
       public_suffix (>= 2.0.2, < 8.0)
@@ -233,7 +233,7 @@ GEM
       actionview (>= 7.0.0)
       activesupport (>= 7.0.0)
     jmespath (1.6.2)
-    json (2.19.2)
+    json (2.19.3)
     jwt (3.1.2)
       base64
     kamal (2.10.1)
