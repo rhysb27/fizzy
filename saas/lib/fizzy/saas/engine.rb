@@ -133,7 +133,7 @@ module Fizzy
       end
 
       config.to_prepare do
-        ::Account.include Account::StorageLimited
+        ::Account.include Account::QueenbeeIntegration, Account::StorageLimited
         ::Identity.include Authorization::Identity, Identity::Devices
         ::Session.include Session::Devices
         ::Signup.prepend Signup
