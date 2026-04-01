@@ -152,7 +152,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     bearer = { "HTTP_AUTHORIZATION" => "Bearer #{identity_access_tokens(:jasons_api_token).token}" }
     get user_path(users(:jason)), env: bearer
 
-    assert_response :redirect
+    assert_response :unauthorized
   end
 
   test "bearer token authenticates JSON requests" do
