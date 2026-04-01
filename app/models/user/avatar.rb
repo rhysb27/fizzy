@@ -11,7 +11,7 @@ module User::Avatar
   ].freeze
 
   included do
-    has_one_attached :avatar do |attachable|
+    has_one_attached :avatar, dependent: :purge_later do |attachable|
       attachable.variant :thumb, resize_to_fill: [ 256, 256 ], process: :immediately
     end
 

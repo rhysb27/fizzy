@@ -48,6 +48,16 @@ module ActiveSupport
     include ActionTextTestHelper, CachingTestHelper, CardTestHelper, ChangeTestHelper, SessionTestHelper
     include Turbo::Broadcastable::TestHelper
 
+    # Jobs must carry their own account context via AccountTenanted,
+    # not rely on Current.account leaking from the test setup.
+    def perform_enqueued_jobs(...)
+      saved_account = Current.account
+      Current.account = nil
+      super
+    ensure
+      Current.account = saved_account
+    end
+
     setup do
       Current.account = accounts("37s")
     end
