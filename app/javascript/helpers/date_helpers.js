@@ -7,7 +7,7 @@ export function signedDifferenceInDays(fromDate, toDate) {
 }
 
 export function beginningOfDay(date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
 export function secondsToDate(seconds) {
