@@ -60,3 +60,39 @@ Marks all unread notifications as read.
 __Response:__
 
 Returns `204 No Content` on success.
+
+## `GET /:account_slug/notifications/settings`
+
+Returns the current user's notification settings.
+
+__Response:__
+
+```json
+{
+  "bundle_email_frequency": "every_few_hours"
+}
+```
+
+Possible values for `bundle_email_frequency`: `never`, `every_few_hours`, `daily`, `weekly`.
+
+## `PUT /:account_slug/notifications/settings`
+
+Updates the current user's notification settings.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `bundle_email_frequency` | string | Yes | How often to bundle notification emails. One of: `never`, `every_few_hours`, `daily`, `weekly` |
+
+__Request:__
+
+```json
+{
+  "user_settings": {
+    "bundle_email_frequency": "daily"
+  }
+}
+```
+
+__Response:__
+
+Returns `204 No Content` on success.

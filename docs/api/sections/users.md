@@ -90,6 +90,14 @@ __Response:__
 
 Returns `204 No Content` on success.
 
+## `DELETE /:account_slug/users/:user_id/avatar`
+
+Removes the user's avatar image. You can only remove avatars for users you have permission to change.
+
+__Response:__
+
+Returns `204 No Content` on success.
+
 ## `DELETE /:account_slug/users/:user_id`
 
 Deactivates a user. You can only deactivate users you have permission to change.
