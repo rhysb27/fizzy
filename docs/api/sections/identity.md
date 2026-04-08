@@ -44,3 +44,23 @@ __Response:__
   ]
 }
 ```
+
+## `PATCH /my/timezone`
+
+Updates the current user's timezone. This affects how times are displayed in notification emails.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `timezone_name` | string | Yes | IANA timezone identifier (e.g. `America/New_York`, `Europe/London`, `Asia/Tokyo`) |
+
+__Request:__
+
+```json
+{
+  "timezone_name": "America/New_York"
+}
+```
+
+__Response:__
+
+Returns `204 No Content` on success.
