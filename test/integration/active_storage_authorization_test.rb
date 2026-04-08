@@ -17,6 +17,13 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_match %r{rails/active_storage}, response.location
   end
 
+  test "bearer token with board access can view blob" do
+    get rails_blob_path(@blob, disposition: :inline), env: bearer_token_env(identity_access_tokens(:davids_api_token).token)
+
+    assert_response :redirect
+    assert_match %r{rails/active_storage}, response.location
+  end
+
   test "authenticated user without board access cannot view blob" do
     sign_in_as :mike
 
@@ -34,6 +41,13 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     sign_in_as :david
 
     get rails_representation_path(@blob.representation(resize_to_limit: [ 100, 100 ]))
+    assert_response :redirect
+    assert_match %r{rails/active_storage/}, response.location
+  end
+
+  test "bearer token with board access can view representation" do
+    get rails_representation_path(@blob.representation(resize_to_limit: [ 100, 100 ])), env: bearer_token_env(identity_access_tokens(:davids_api_token).token)
+
     assert_response :redirect
     assert_match %r{rails/active_storage/}, response.location
   end
@@ -194,6 +208,15 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
     assert_match %r{rails/active_storage}, response.location
   end
 
+  test "export owner can download their export with bearer token" do
+    blob = create_export_blob_for(users(:david))
+
+    get rails_blob_path(blob, disposition: :attachment), env: bearer_token_env(identity_access_tokens(:davids_api_token).token)
+
+    assert_response :redirect
+    assert_match %r{rails/active_storage}, response.location
+  end
+
   test "non-owner cannot download another user's export" do
     sign_in_as :jz
 
@@ -248,5 +271,9 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
         user.avatar.attach io: file_fixture("moon.jpg").open, filename: "avatar.jpg", content_type: "image/jpeg"
         user.avatar.blob
       end
+    end
+
+    def bearer_token_env(token)
+      { "HTTP_AUTHORIZATION" => "Bearer #{token}" }
     end
 end
