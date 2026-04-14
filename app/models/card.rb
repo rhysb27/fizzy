@@ -30,6 +30,7 @@ class Card < ApplicationRecord
     when "stalled" then stalled
     when "postponing_soon" then postponing_soon
     when "closed" then closed
+    when "maybe" then awaiting_triage
     when "not_now" then postponed.latest
     when "golden" then golden
     when "draft" then drafted

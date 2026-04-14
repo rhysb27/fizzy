@@ -17,7 +17,7 @@ __Query Parameters:__
 | `closer_ids[]` | Filter by user ID(s) who closed the cards |
 | `card_ids[]` | Filter to specific card ID(s) |
 | `column_ids[]` | Filter by workflow column ID(s) |
-| `indexed_by` | Filter by: `all` (default), `closed`, `not_now`, `stalled`, `postponing_soon`, `golden` |
+| `indexed_by` | Filter by: `all` (default), `maybe`, `closed`, `not_now`, `stalled`, `postponing_soon`, `golden` |
 | `sorted_by` | Sort order: `latest` (default), `newest`, `oldest` |
 | `assignment_status` | Filter by assignment status: `unassigned` |
 | `creation` | Filter by creation date: `today`, `yesterday`, `thisweek`, `lastweek`, `thismonth`, `lastmonth`, `thisyear`, `lastyear` |
