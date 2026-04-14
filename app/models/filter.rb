@@ -35,6 +35,7 @@ class Filter < ApplicationRecord
       result = terms.reduce(result) do |result, term|
         result.mentioning(term, user: creator)
       end
+      result = result.where(column_id: column_ids) if column_ids.present?
 
       result.distinct
     end

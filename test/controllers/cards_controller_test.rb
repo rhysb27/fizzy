@@ -15,6 +15,20 @@ class CardsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "index as JSON can filter by workflow column id" do
+    get cards_path(format: :json), params: { column_ids: [ columns(:writebook_in_progress).id ] }
+    assert_response :success
+
+    assert_equal [ cards(:text).number ], @response.parsed_body.pluck("number")
+  end
+
+  test "index as JSON can OR multiple workflow column ids" do
+    get cards_path(format: :json), params: { column_ids: [ columns(:writebook_triage).id, columns(:writebook_in_progress).id ] }
+    assert_response :success
+
+    assert_equal [ cards(:logo).number, cards(:layout).number, cards(:text).number ].sort, @response.parsed_body.pluck("number").sort
+  end
+
   test "create a new draft" do
     assert_difference -> { Card.count }, 1 do
       post board_cards_path(boards(:writebook))

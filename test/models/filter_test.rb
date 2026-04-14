@@ -166,6 +166,17 @@ class FilterTest < ActiveSupport::TestCase
     assert_not users(:david).filters.new(board_ids: [ boards(:writebook).id ]).used?(ignore_boards: true)
   end
 
+  test "column ids filter cards by workflow columns" do
+    assert_equal [ cards(:text) ], users(:david).filters.new(column_ids: [ columns(:writebook_in_progress).id ]).cards.to_a
+    assert_equal [ cards(:logo), cards(:layout) ].sort_by(&:id), users(:david).filters.new(column_ids: [ columns(:writebook_triage).id ]).cards.to_a.sort_by(&:id)
+  end
+
+  test "column ids are ORed together" do
+    filter = users(:david).filters.new(column_ids: [ columns(:writebook_triage).id, columns(:writebook_in_progress).id ])
+
+    assert_equal [ cards(:logo), cards(:layout), cards(:text) ].sort_by(&:id), filter.cards.to_a.sort_by(&:id)
+  end
+
   test "board titles are scoped to creator's account" do
     # Give mike (initech) access to the board in his account
     boards(:miltons_wish_list).accesses.grant_to(users(:mike))
