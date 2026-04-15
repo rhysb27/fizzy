@@ -9,6 +9,7 @@ class NotificationDeliveryTest < ActiveSupport::TestCase
     @card.assignments.destroy_all
     @assignee.notifications.destroy_all
 
+    stub_dns_resolution("142.250.185.206")
     stub_web_push_pool
 
     @original_targets = Notification.push_targets.dup
