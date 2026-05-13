@@ -89,6 +89,22 @@ Staging is primarily intended for testing infrastructure changes. It uses produc
 
 - https://app.fizzy-staging.com/
 
+## Maintenance mode
+
+To take production offline for maintenance, run `kamal-proxy stop` on the load balancers via `knife ssh`:
+
+```bash
+knife ssh 'hostname:fizzy-lb-*' "sudo docker exec fizzy-load-balancer kamal-proxy stop fizzy --message='Sorry! Fizzy is undergoing some maintenance and will be back shortly.'"
+```
+
+Verify maintenance is enabled by visiting https://app.fizzy.do/.
+
+To lift maintenance mode:
+
+```bash
+knife ssh 'hostname:fizzy-lb-*' 'sudo docker exec fizzy-load-balancer kamal-proxy resume fizzy'
+```
+
 ## License
 
 fizzy-saas is released under the [O'Saasy License](LICENSE.md).
