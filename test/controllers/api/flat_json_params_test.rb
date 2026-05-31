@@ -104,11 +104,13 @@ class FlatJsonParamsTest < ActionDispatch::IntegrationTest
       params: { name: "Flat board", auto_postpone_period_in_days: 7, public_description: "<p>Flat public desc</p>" },
       as: :json
 
-    assert_response :no_content
+    assert_response :success
     board.reload
     assert_equal "Flat board", board.name
     assert_equal 7.days, board.entropy.auto_postpone_period
     assert_equal "Flat public desc", board.public_description.to_plain_text
+    assert_equal board.id, @response.parsed_body["id"]
+    assert_equal "Flat board", @response.parsed_body["name"]
   end
 
   test "create column with flat JSON" do
