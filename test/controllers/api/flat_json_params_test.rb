@@ -53,7 +53,7 @@ class FlatJsonParamsTest < ActionDispatch::IntegrationTest
   end
 
   test "create push subscription with flat JSON" do
-    stub_dns_resolution("142.250.185.206")
+    stub_web_push_dns_resolution
 
     post user_push_subscriptions_path(users(:kevin)),
       params: { endpoint: "https://fcm.googleapis.com/fcm/send/abc123", p256dh_key: "key1", auth_key: "key2" },
