@@ -129,8 +129,10 @@ class FlatJsonParamsTest < ActionDispatch::IntegrationTest
 
     put board_column_path(column.board, column), params: { name: "Flat Updated" }, as: :json
 
-    assert_response :no_content
+    assert_response :success
     assert_equal "Flat Updated", column.reload.name
+    assert_equal column.id, @response.parsed_body["id"]
+    assert_equal "Flat Updated", @response.parsed_body["name"]
   end
 
   test "create step with flat JSON" do
