@@ -1,3 +1,5 @@
+import { getMetaContent } from "helpers/meta_helpers"
+
 export function differenceInDays(fromDate, toDate) {
   return Math.round(Math.abs((beginningOfDay(toDate) - beginningOfDay(fromDate)) / (1000 * 60 * 60 * 24)))
 }
@@ -15,9 +17,9 @@ export function secondsToDate(seconds) {
   return new Date(seconds * 1000)
 }
 
-// Snap a timestamp to midnight using the user's timezone (from the `timezone`
-// cookie the server reads too), so client day boundaries match the server's
-// and don't follow the browser's resolved timezone, which can differ in a PWA.
+// Snap a timestamp to midnight using the timezone the server rendered with (the
+// `timezone` meta tag), so client day boundaries match the server's instead of
+// following the browser's resolved timezone, which can differ in a PWA.
 function datePartsInTimezone(date) {
   return dateFormatter().formatToParts(date).reduce((parts, { type, value }) => {
     if (type !== "literal") parts[type] = parseInt(value, 10)
@@ -29,7 +31,7 @@ let dateFormatterCache
 let dateFormatterTimezone
 
 function dateFormatter() {
-  const timezone = currentTimezone()
+  const timezone = getMetaContent("timezone")
 
   if (!dateFormatterCache || dateFormatterTimezone !== timezone) {
     dateFormatterTimezone = timezone
@@ -47,9 +49,4 @@ function buildDateFormatter(timezone) {
   } catch {
     return new Intl.DateTimeFormat("en-US", options)
   }
-}
-
-function currentTimezone() {
-  const cookie = document.cookie.split("; ").find(entry => entry.startsWith("timezone="))
-  return cookie ? decodeURIComponent(cookie.split("=")[1]) : undefined
 }
