@@ -68,9 +68,12 @@ class Filter < ApplicationRecord
   private
     def filter_boards(relation)
       relation = relation.where(cards: { account_id: creator.account_id }).where(board: boards.ids)
-      return relation if fans_out?
-      # Pin the (account_id, last_active_at, status) index so the ordered page is served by a reverse scan, not a filesort.
-      relation.use_index(:index_cards_on_account_id_and_last_active_at_and_status)
+      if fans_out?
+        relation
+      else
+        # Pin the (account_id, last_active_at, status) index so the ordered page is served by a reverse scan, not a filesort.
+        relation.use_index(:index_cards_on_account_id_and_last_active_at_and_status)
+      end
     end
 
     # Assignee, tag, and term filters add a has-many join that fans a card into
