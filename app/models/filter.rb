@@ -68,7 +68,7 @@ class Filter < ApplicationRecord
   private
     def filter_boards(relation)
       relation = relation.where(cards: { account_id: creator.account_id }).where(board: boards.ids)
-      if fans_out?
+      if filters_by_association?
         relation
       else
         # Pin the (account_id, last_active_at, status) index so the ordered page is served by a reverse scan, not a filesort.
@@ -79,7 +79,7 @@ class Filter < ApplicationRecord
     # Assignee, tag, and term filters add a has-many join that fans a card into
     # several rows; the ordered reverse scan loses to a different plan then, so
     # the pin only applies without them.
-    def fans_out?
+    def filters_by_association?
       assignees.present? || tags.present? || terms.present?
     end
 
