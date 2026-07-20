@@ -37,17 +37,21 @@ module SsrfProtection
     IPAddr.new("::/128"),        # Unspecified
     IPAddr.new("100::/64"),      # Discard-only (RFC6666)
     IPAddr.new("2001::/32"),     # Teredo (RFC4380)
+    IPAddr.new("2001:2::/48"),   # Benchmark testing (RFC5180)
     IPAddr.new("2001:db8::/32"), # Documentation (RFC3849)
     IPAddr.new("2002::/16"),     # 6to4 (RFC3056)
     IPAddr.new("fec0::/10"),     # Deprecated site-local (RFC3879)
     IPAddr.new("ff00::/8")       # Multicast (RFC4291)
   ].freeze
 
-  # Well-known NAT64 prefix (RFC 6052/6146). An address here embeds an IPv4
-  # target in its low 32 bits; extract it and re-check against the IPv4 rules so
-  # NAT64 to a public address still resolves while NAT64 to an internal address
-  # is blocked.
-  NAT64_WELL_KNOWN = IPAddr.new("64:ff9b::/96")
+  # NAT64 prefixes: the well-known prefix (RFC 6052/6146) and the local-use
+  # prefix (RFC 8215). An address here embeds an IPv4 target in its low 32
+  # bits; extract it and re-check against the IPv4 rules so NAT64 to a public
+  # address still resolves while NAT64 to an internal address is blocked.
+  NAT64_PREFIXES = [
+    IPAddr.new("64:ff9b::/96"),
+    IPAddr.new("64:ff9b:1::/48")
+  ].freeze
 
   def resolve_public_ip(hostname)
     ip_addresses = resolve_dns(hostname)
@@ -64,7 +68,7 @@ module SsrfProtection
       true
     elsif ipaddr.ipv4?
       disallowed_ipv4?(ipaddr)
-    elsif NAT64_WELL_KNOWN.include?(ipaddr)
+    elsif NAT64_PREFIXES.any? { |prefix| prefix.include?(ipaddr) }
       disallowed_ipv4?(embedded_ipv4(ipaddr))
     else
       disallowed_ipv6?(ipaddr)
