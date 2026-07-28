@@ -1,0 +1,27 @@
+▸ Ensuring mise install
+ensure_correct_mise_install
+
+▸ Trusting mise config
+mise trust --yes $APP/.mise.toml
+mise trusted $APP
+
+▸ Installing system packages
+brew bundle --file=$APP/Brewfile
+
+▸ Installing Ruby and tools
+mise install --yes
+
+
+   ˚ ∘             ∘ ˚   
+  ∘˚˳°∘°  𝒻𝒾𝓏𝓏𝓎  °∘°˳˚∘  
+
+▸ Installing RubyGems
+bundle install
+
+▸ Preparing the database
+mise run --skip-deps db:prepare
+
+▸ Cleaning up logs and tempfiles
+mise run --skip-deps setup:cleanup
+
+✓ Done (N sec)
