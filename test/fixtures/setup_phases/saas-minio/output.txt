@@ -35,7 +35,7 @@ $HOME/Work/basecamp/docker-dev/setup minio
 bin/minio-setup
 
 ▸ Starting mysql
-$HOME/Work/basecamp/docker-dev/setup mysql80
+$HOME/Work/basecamp/docker-dev/setup mysql84
 
 ▸ Preparing the database
 rails db:prepare

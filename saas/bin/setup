@@ -106,4 +106,4 @@ if [ -e tmp/minio-dev.txt ]; then
   step "Configuring MinIO" bin/minio-setup
 fi
 
-step "Starting mysql" ~/Work/basecamp/docker-dev/setup mysql80
+step "Starting mysql" ~/Work/basecamp/docker-dev/setup mysql84

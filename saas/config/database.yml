@@ -29,31 +29,31 @@ development:
   primary:
     <<: *default
     database: fizzy_development
-    port: <%= ENV.fetch "FIZZY_DB_PORT", 33380 %>
+    port: <%= ENV.fetch "FIZZY_DB_PORT", 33384 %>
   replica:
     <<: *default
     database: fizzy_development
-    port: <%= ENV.fetch "FIZZY_DB_PORT", 33380 %>
+    port: <%= ENV.fetch "FIZZY_DB_PORT", 33384 %>
     replica: true
   cable:
     <<: *default
     database: development_cable
-    port: <%= ENV.fetch "FIZZY_DB_PORT", 33380 %>
+    port: <%= ENV.fetch "FIZZY_DB_PORT", 33384 %>
     migrations_paths: db/cable_migrate
   cache:
     <<: *default
     database: development_cache
-    port: <%= ENV.fetch "FIZZY_DB_PORT", 33380 %>
+    port: <%= ENV.fetch "FIZZY_DB_PORT", 33384 %>
     migrations_paths: db/cache_migrate
   queue:
     <<: *default
     database: development_queue
-    port: <%= ENV.fetch "FIZZY_DB_PORT", 33380 %>
+    port: <%= ENV.fetch "FIZZY_DB_PORT", 33384 %>
     migrations_paths: db/queue_migrate
   saas:
     <<: *default
     database: fizzy_saas_development
-    port: <%= ENV.fetch "FIZZY_DB_PORT", 33380 %>
+    port: <%= ENV.fetch "FIZZY_DB_PORT", 33384 %>
     migrations_paths: <%= File.join(gem_path, "db", "migrate") %>
     schema_dump: <%= File.join(gem_path, "db", "saas_schema.rb") %>
 
@@ -64,16 +64,16 @@ test:
   primary:
     <<: *default
     database: fizzy_test
-    port: <%= ENV.fetch "FIZZY_DB_PORT", 33380 %>
+    port: <%= ENV.fetch "FIZZY_DB_PORT", 33384 %>
   replica:
     <<: *default
     database: fizzy_test
-    port: <%= ENV.fetch "FIZZY_DB_PORT", 33380 %>
+    port: <%= ENV.fetch "FIZZY_DB_PORT", 33384 %>
     replica: true
   saas:
     <<: *default
     database: fizzy_saas_test
-    port: <%= ENV.fetch "FIZZY_DB_PORT", 33380 %>
+    port: <%= ENV.fetch "FIZZY_DB_PORT", 33384 %>
     migrations_paths: <%= File.join(gem_path, "db", "migrate") %>
     schema_dump: <%= File.join(gem_path, "db", "saas_schema.rb") %>
 
