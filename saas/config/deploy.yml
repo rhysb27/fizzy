@@ -30,4 +30,5 @@ builder:
 
 aliases:
   console: app exec -i --reuse -e CONSOLE_USER:<%= ENV["USER"] %> "bin/rails console"
+  query: 'app exec -q --reuse -p -e CONSOLE_USER:<%= ENV["USER"] %> CLAUDECODE:<%= ENV["CLAUDECODE"] %> CODEX_THREAD_ID:<%= ENV["CODEX_THREAD_ID"] %> "bin/rails query"'
   ssh: app exec -i --reuse -e CONSOLE_USER:<%= ENV["USER"] %> /bin/bash
