@@ -3,7 +3,7 @@ class Account::DataImportJob < ApplicationJob
 
   queue_as :backend
   discard_on Account::DataTransfer::RecordSet::IntegrityError, ZipFile::InvalidFileError,
-    Account::Import::InsufficientSpaceError
+    Account::Import::InsufficientStorageSpaceError
 
   def perform(import)
     step :check do |step|
