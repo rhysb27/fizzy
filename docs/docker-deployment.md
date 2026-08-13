@@ -157,7 +157,7 @@ If you do want to allow multiple accounts to be created in your instance, set `M
 
 You can move an account between Fizzy instances by exporting it on the old instance and uploading the export zip to the new one during signup.
 
-Imports need free space: at least twice the export file's size, beyond the export itself, since the imported attachments roughly mirror the zip's contents. If there isn't enough, the import fails fast with "There wasn't enough storage space to process your import." — free up space (or grow the volume) and try again. If free space can't be determined, the check is skipped and the import proceeds.
+Imports need free space: at least twice the export file's size, beyond the export itself, since the imported attachments roughly mirror the zip's contents. If there isn't enough, the import fails before it starts and your logs record `import needs ~90 GB free, found 12 GB`. The person importing only sees a generic failure, so check the logs when an import fails for no apparent reason: free up space (or grow the volume) and have them try again. If free space can't be determined, the check is skipped and the import proceeds.
 
 For very large exports:
 
