@@ -1,5 +1,9 @@
 source "https://rubygems.org"
 
+# Fail loudly when bundling under the wrong Ruby rather than silently
+# re-resolving the lockfile against its native-gem version caps.
+ruby file: ".ruby-version"
+
 git_source(:bc) { |repo| "https://github.com/basecamp/#{repo}" }
 
 gem "rails", github: "rails/rails", branch: "main"
