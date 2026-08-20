@@ -18,8 +18,7 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
   end
 
   # A group name, or any typo, is `0` under to_i — root — and the client would chown every descriptor to
-  # it. Same reason HOTCELL_ACTIVE_STORAGE raises on a name it does not know: a mistake in a deploy file
-  # must not look like a working configuration.
+  # it. A mistake in a deploy file must not look like a working configuration.
   test "a group that is not a number raises rather than meaning root" do
     with_env "HOTCELL_GROUP" => "hotcell" do
       error = assert_raises(HotCell::ConfigurationError) { Cell.register! }
@@ -34,11 +33,11 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
     Cell.stubs(:echo).raises("echo must not run here")
     Cell.stubs(:reopen).raises("reopen must not run here")
 
-    assert_equal %i[ at host root groups describe metrics ], Cell.diagnostics.keys
+    assert_equal %i[ at host root describe metrics ], Cell.diagnostics.keys
   end
 
   test "work asks for the round trips as well" do
-    assert_equal %i[ at host root groups describe metrics echo reopen ], Cell.diagnostics(work: true).keys
+    assert_equal %i[ at host root describe metrics echo reopen ], Cell.diagnostics(work: true).keys
   end
 
   # The round trips report what they compared, and nothing above them looked at it — so a cell returning
@@ -64,56 +63,19 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
     end
   end
 
-  test "a root registers the cell without moving any work" do
-    with_env "HOTCELL_ROOT" => "tmp/hotcell", "HOTCELL_ACTIVE_STORAGE" => nil do
-      assert Cell.enabled?
-      assert_not Cell.processing_attachments?
+  test "no root moves no work" do
+    with_env "HOTCELL_ROOT" => nil do
+      assert_not Cell.enabled?
       assert_empty Cell.active_storage_configuration
     end
   end
 
-  test "the work switch does nothing without a root" do
-    with_env "HOTCELL_ROOT" => nil, "HOTCELL_ACTIVE_STORAGE" => "all" do
-      assert_not Cell.processing_attachments?
-      assert_empty Cell.active_storage_configuration
-    end
-  end
-
-  test "images moves the transformer and the image analyzer together" do
-    configuration = configuration_for "images"
+  test "a root moves every operation to the cell" do
+    configuration = with_env("HOTCELL_ROOT" => "tmp/hotcell") { Cell.active_storage_configuration }
 
     assert_equal ActiveStorage::HotCell::Client::Transformers::Image::Vips, configuration[:variant_processor]
-    assert_equal [ ActiveStorage::HotCell::Client::Analyzers::Image::Vips ],
-      configuration[:analyzers].grep(hotcell_classes)
-  end
-
-  test "a group that has not moved keeps Rails' own classes" do
-    configuration = configuration_for "images"
-
-    assert_equal [ ActiveStorage::Analyzer::VideoAnalyzer, ActiveStorage::Analyzer::AudioAnalyzer ],
-      configuration[:analyzers] - configuration[:analyzers].grep(hotcell_classes)
-    assert_equal [ ActiveStorage::Previewer::PopplerPDFPreviewer, ActiveStorage::Previewer::MuPDFPreviewer,
-                   ActiveStorage::Previewer::VideoPreviewer ], configuration[:previewers]
-  end
-
-  test "pdfs moves the PDF previewer and leaves Rails' video previewer behind it" do
-    configuration = configuration_for "images,pdfs"
-
-    assert_equal [ ActiveStorage::HotCell::Client::Previewers::Pdf::Mutool,
-                   ActiveStorage::Previewer::VideoPreviewer ], configuration[:previewers]
-  end
-
-  test "all moves every operation" do
-    configuration = configuration_for "all"
-
     assert_empty configuration[:analyzers] - configuration[:analyzers].grep(hotcell_classes)
     assert_empty configuration[:previewers] - configuration[:previewers].grep(hotcell_classes)
-  end
-
-  test "an unknown group raises rather than meaning off" do
-    error = assert_raises(ArgumentError) { configuration_for "imgaes" }
-
-    assert_match "imgaes", error.message
   end
 
   test "the transient class does not descend from the permanent one" do
@@ -151,12 +113,6 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
           output.write File.read(input.path)
           { bytes: 7, staged: true }
         end
-      end
-    end
-
-    def configuration_for(groups)
-      with_env "HOTCELL_ROOT" => "tmp/hotcell", "HOTCELL_ACTIVE_STORAGE" => groups do
-        Cell.active_storage_configuration
       end
     end
 

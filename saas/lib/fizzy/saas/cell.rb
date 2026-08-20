@@ -12,10 +12,9 @@ module Fizzy
     # Deliberately not named HotCell, or any near-spelling of it: a cell is forked from a process that may
     # have loaded the client, and a shared constant across the two sides is a superclass mismatch at boot.
     #
-    # Two switches, because a cell being reachable and a cell taking traffic are different questions.
-    # HOTCELL_ROOT registers the cell, so metrics, describe, the healthcheck and /hotcellz all answer while
-    # every conversion still runs in the app. HOTCELL_ACTIVE_STORAGE is what moves the work, and it is a
-    # list rather than a flag because the rollout moves operations in groups.
+    # One switch: HOTCELL_ROOT registers the cell, and a registered cell carries every conversion.
+    # Unset — an open-source checkout, or SaaS mode without a cell — Active Storage keeps its own
+    # analyzers and previewers and everything runs in the app.
     module Cell
       NAME = "active_storage"
 
@@ -36,10 +35,6 @@ module Fizzy
       # A /hotcellz check that answered, but answered badly. Its message is already a sentence, so it is
       # reported without an exception class in front of it.
       class CheckFailed < StandardError; end
-
-      # Listed in the order Active Storage should see their classes, because the first analyzer or
-      # previewer that accepts a blob is the one that runs.
-      GROUPS = %i[ images pdfs media ]
 
       class << self
         def root
@@ -69,29 +64,20 @@ module Fizzy
           ::HotCell.cell NAME
         end
 
-        def processing_attachments?
-          enabled? && groups.any?
-        end
-
-        def processing?(group)
-          processing_attachments? && groups.include?(group)
-        end
-
-        # Everything Active Storage should be configured with. `analyzers` and `previewers` are arrays
-        # Rails replaces wholesale, so a group that is off has to contribute Rails' own classes back or a
-        # partial rollout would not stage the work — it would delete it. Step two hands Rails a mixed
-        # array: this cell's PDF previewer beside Rails' own video one. That works only while the app
-        # image still carries the tools Rails' built-ins shell out to, which is why they leave last.
+        # Everything Active Storage should be configured with, resolved here rather than in a constant
+        # because this file is required during Bundler.require, before Active Storage has defined its own
+        # classes. The image analyzer moves with the transformer whether or not you ask: Rails' image
+        # analyzers test `variant_processor == :vips`, so pointing the transformer at a class makes them
+        # decline and blobs get marked analyzed with no dimensions.
         def active_storage_configuration
-          return {} unless processing_attachments?
+          return {} unless enabled?
 
-          GROUPS.each_with_object({ analyzers: [], previewers: [] }) do |group, merged|
-            configuration = configuration_for(group, moved: processing?(group))
-
-            merged[:variant_processor] = configuration[:variant_processor] if configuration.key?(:variant_processor)
-            merged[:analyzers] += configuration.fetch(:analyzers, [])
-            merged[:previewers] += configuration.fetch(:previewers, [])
-          end
+          { variant_processor: ActiveStorage::HotCell::Client::Transformers::Image::Vips,
+            analyzers: [ ActiveStorage::HotCell::Client::Analyzers::Image::Vips,
+                         ActiveStorage::HotCell::Client::Analyzers::Video::FFprobe,
+                         ActiveStorage::HotCell::Client::Analyzers::Audio::FFprobe ],
+            previewers: [ ActiveStorage::HotCell::Client::Previewers::Pdf::Mutool,
+                          ActiveStorage::HotCell::Client::Previewers::Video::FFmpeg ] }
         end
 
         # What /hotcellz reports. Every check answers rather than raises, because the page's job is to be
@@ -119,8 +105,7 @@ module Fizzy
 
           checks.merge! echo: reporting { echo }, reopen: reporting { reopen } if work
 
-          { at: Time.now.utc.iso8601(3), host: Socket.gethostname,
-            root: root, groups: processing_attachments? ? groups : [] }.merge(checks)
+          { at: Time.now.utc.iso8601(3), host: Socket.gethostname, root: root }.merge(checks)
         end
 
         # A fixed payload through example.echo, which reads the descriptor directly.
@@ -190,52 +175,6 @@ module Fizzy
             raise CheckFailed, response.failure.to_s unless response.ok?
 
             response.result
-          end
-
-          # What each group installs when it has moved, and what Rails runs when it has not. The constants
-          # resolve here rather than in a table at load time, because this file is required during
-          # Bundler.require, before Active Storage has defined its own.
-          def configuration_for(group, moved:)
-            case [ group, moved ]
-            in [ :images, true ]
-              # Rails' image analyzers answer accept? with `variant_processor == :vips` (or
-              # :mini_magick), so pointing the transformer at a class makes both decline and blobs get
-              # marked analyzed with no dimensions. The two move together or not at all.
-              { variant_processor: ActiveStorage::HotCell::Client::Transformers::Image::Vips,
-                analyzers: [ ActiveStorage::HotCell::Client::Analyzers::Image::Vips ] }
-            in [ :images, false ]
-              { analyzers: [ ActiveStorage::Analyzer::ImageAnalyzer::Vips,
-                             ActiveStorage::Analyzer::ImageAnalyzer::ImageMagick ] }
-            in [ :pdfs, true ]
-              { previewers: [ ActiveStorage::HotCell::Client::Previewers::Pdf::Mutool ] }
-            in [ :pdfs, false ]
-              { previewers: [ ActiveStorage::Previewer::PopplerPDFPreviewer,
-                              ActiveStorage::Previewer::MuPDFPreviewer ] }
-            in [ :media, true ]
-              { analyzers: [ ActiveStorage::HotCell::Client::Analyzers::Video::FFprobe,
-                             ActiveStorage::HotCell::Client::Analyzers::Audio::FFprobe ],
-                previewers: [ ActiveStorage::HotCell::Client::Previewers::Video::FFmpeg ] }
-            in [ :media, false ]
-              { analyzers: [ ActiveStorage::Analyzer::VideoAnalyzer,
-                             ActiveStorage::Analyzer::AudioAnalyzer ],
-                previewers: [ ActiveStorage::Previewer::VideoPreviewer ] }
-            end
-          end
-
-          # An unrecognized name raises rather than meaning "off": a typo in a deploy file would otherwise
-          # be a rollout that appears to have happened.
-          def groups
-            names = ENV["HOTCELL_ACTIVE_STORAGE"].to_s.split(",").filter_map { it.strip.downcase.presence&.to_sym }
-            return GROUPS if names.include?(:all)
-
-            names.each do |name|
-              unless GROUPS.include?(name)
-                raise ArgumentError, "unknown HOTCELL_ACTIVE_STORAGE group #{name.inspect} " \
-                                     "(known: #{GROUPS.join(", ")}, all)"
-              end
-            end
-
-            names
           end
       end
 

@@ -65,8 +65,7 @@ Image variants, blob analysis and PDF and video previews can run in an unprivile
 In SaaS mode `bin/dev` boots a cell beside the server, through `saas/Procfile.dev` and foreman. The cell runs uncontainerized, because a container cannot receive a file descriptor on macOS — Docker runs a Linux VM there and `SCM_RIGHTS` has nothing meaningful to hand across two kernels.
 
 ```sh
-bin/dev            # the cell boots and /hotcellz answers; conversions still run in the app
-bin/dev --hotcell  # attachment processing goes to the cell
+bin/dev            # the cell boots and carries attachment processing, as in production
 ```
 
 `/hotcellz` says whether the cell is reachable. It asks the control socket only — `describe` and `metrics`, which the supervisor answers inline with no fork — and replies `OK` or `FAIL` with a 200 or a 503. It is unauthenticated so a monitor can poll it, and it says nothing else, because a stranger has no business knowing the cell's inventory or how loaded it is.
@@ -81,21 +80,8 @@ Because the dev cell shells out to your laptop rather than to the image, every t
 
 | variable | what it does | where it lives |
 | --- | --- | --- |
-| `HOTCELL_ROOT` | Registers the cell. Metrics, `describe`, the healthcheck and `/hotcellz` answer, and every conversion still runs in the app. | `saas/config/deploy.yml` |
+| `HOTCELL_ROOT` | Registers the cell, which then carries every conversion. Unset, everything runs in the app. | `saas/config/deploy.yml` |
 | `HOTCELL_GROUP` | The gid the app and the cell share, so the cell can open a file the app hands it by name. Must match the `group-add` on the app's roles and the cell's own gid. Unset in development, where both sides run as one user. | `saas/config/deploy.yml` |
-| `HOTCELL_ACTIVE_STORAGE` | Moves the work. A comma-separated list of `images`, `pdfs`, `media`, or `all`. | each `saas/config/deploy.<destination>.yml` |
-
-Registering and moving work are separate questions, and the second is a list because the rollout moves
-operations in groups. `images` carries the image analyzer along with the transformer whether or not you
-ask: Rails' image analyzers test `variant_processor == :vips`, so pointing the transformer at a class makes
-them decline and blobs get marked analyzed with no dimensions.
-
-The first two are the same everywhere and belong in the base file. **`HOTCELL_ACTIVE_STORAGE` belongs in
-the destination files**, because how far a destination has rolled out is a per-destination decision — in
-the base it moves every destination at once. A destination naming no list keeps its cell registered and
-idle, which is where one that has not started should be.
-
-An unknown group name raises at boot rather than meaning "off".
 
 ### Building and shipping the image
 

@@ -55,7 +55,7 @@ class HotcellzControllerTest < ActionDispatch::IntegrationTest
     untenanted { get HOTCELLZ_TEST }
 
     assert_equal "application/json", response.media_type
-    assert_equal %w[ at host root groups describe metrics echo reopen ], response.parsed_body.keys
+    assert_equal %w[ at host root describe metrics echo reopen ], response.parsed_body.keys
   end
 
   # Spelled the way the cell spells `at` in its own log lines, so a reading lines up against them.

@@ -3,7 +3,6 @@
 PORT=3006
 USE_TAILSCALE=0
 USE_PUSH=0
-USE_HOTCELL=0
 FOREMAN_ARGS=()
 
 export PORT
@@ -21,7 +20,6 @@ for arg in "$@"; do
   case $arg in
     --tailscale) USE_TAILSCALE=1 ;;
     --push) USE_PUSH=1 ;;
-    --hotcell) USE_HOTCELL=1 ;;
     --help|-h)
       cat <<USAGE
 Usage: bin/dev [options]
@@ -31,12 +29,10 @@ Starts the Fizzy development processes using foreman.
 Options:
   --tailscale   Expose the dev server via tailscale serve
   --push        Load push notification credentials from 1Password (implies SaaS mode)
-  --hotcell     Route attachment processing through the cell, not just boot it
   -h, --help    Show this help
 
-In SaaS mode a hotcell cell boots beside the server with HOTCELL_ROOT set, while
-every conversion still runs in the app — the same position production step one
-is in. --hotcell moves the work to the cell.
+In SaaS mode a hotcell cell boots beside the server with HOTCELL_ROOT set, and
+attachment processing runs in it — the same position production is in.
 USAGE
       exit 0
       ;;
@@ -76,9 +72,6 @@ PROCFILE=Procfile.dev
 if [ -f tmp/saas.txt ]; then
   PROCFILE=saas/Procfile.dev
   export HOTCELL_ROOT=tmp/hotcell
-  if [ "$USE_HOTCELL" = "1" ]; then
-    export HOTCELL_ACTIVE_STORAGE=all
-  fi
   if [ ! -f saas/hotcell/Gemfile.lock ]; then
     echo "Error: the cell has no bundle. Run bin/setup." >&2
     exit 1
