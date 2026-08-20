@@ -70,6 +70,30 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
     end
   end
 
+  # Unstubbed by hand rather than left to mocha, whose automatic unstub runs after this class's
+  # teardown re-registers the cell — which would raise exactly the error this test is about.
+  test "a deployed app refuses to boot without a cell" do
+    Rails.env.stubs(:local?).returns(false)
+
+    with_env "HOTCELL_ROOT" => nil do
+      error = assert_raises(HotCell::ConfigurationError) { Cell.register! }
+
+      assert_match "HOTCELL_ROOT", error.message
+    end
+  ensure
+    Rails.env.unstub(:local?)
+  end
+
+  test "asset precompilation boots without a cell" do
+    Rails.env.stubs(:local?).returns(false)
+
+    with_env "HOTCELL_ROOT" => nil, "SECRET_KEY_BASE_DUMMY" => "1" do
+      assert_nothing_raised { Cell.register! }
+    end
+  ensure
+    Rails.env.unstub(:local?)
+  end
+
   test "a root moves every operation to the cell" do
     configuration = with_env("HOTCELL_ROOT" => "tmp/hotcell") { Cell.active_storage_configuration }
 

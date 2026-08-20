@@ -13,8 +13,10 @@ module Fizzy
     # have loaded the client, and a shared constant across the two sides is a superclass mismatch at boot.
     #
     # One switch: HOTCELL_ROOT registers the cell, and a registered cell carries every conversion.
-    # Unset — an open-source checkout, or SaaS mode without a cell — Active Storage keeps its own
-    # analyzers and previewers and everything runs in the app.
+    # Only development and test may run without one — there Active Storage keeps its own analyzers
+    # and previewers and everything runs in the app. A deployed app has no in-app fallback any more,
+    # so a deployment without a cell is a misconfiguration caught at boot rather than a 500 on the
+    # first upload.
     module Cell
       NAME = "active_storage"
 
@@ -37,8 +39,16 @@ module Fizzy
       class CheckFailed < StandardError; end
 
       class << self
+        # SECRET_KEY_BASE_DUMMY is asset precompilation in the Dockerfile, which boots the production
+        # environment with no cell.
         def root
-          ENV["HOTCELL_ROOT"].presence
+          value = ENV["HOTCELL_ROOT"].presence
+
+          if value.nil? && !Rails.env.local? && !ENV["SECRET_KEY_BASE_DUMMY"]
+            raise ::HotCell::ConfigurationError, "HOTCELL_ROOT must be set outside development and test"
+          end
+
+          value
         end
 
         # Unset in development, where the app and its cell run as one user and there is no group to share.

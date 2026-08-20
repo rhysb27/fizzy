@@ -52,9 +52,12 @@ RUN SECRET_KEY_BASE_DUMMY=1 \
 # Final stage for app image
 FROM base
 
-# Install packages needed for deployment
+# Install packages needed for deployment. No libvips, ffmpeg or mupdf-tools: every conversion runs
+# in the hotcell cell, whose image carries its own. Rails' active_storage/vips tolerates the missing
+# library (ActiveStorage::VIPS_AVAILABLE=false), and config/initializers/vips.rb only demands it
+# when no cell is registered.
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libsqlite3-0 libvips build-essential ffmpeg mupdf-tools sqlite3 libjemalloc-dev && \
+    apt-get install --no-install-recommends -y curl libsqlite3-0 build-essential sqlite3 libjemalloc-dev && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Copy built artifacts: gems, application
