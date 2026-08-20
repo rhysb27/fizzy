@@ -1,8 +1,5 @@
 require "test_helper"
 
-# A permanent verdict from the cell is a fact about one variant of one blob. It must not fail the save of
-# the record that attached the file: `process: :immediately` transforms inline inside the record's
-# after_commit, so the record is already committed by then, and a raise there 500s a POST that succeeded.
 class Fizzy::Saas::UnprocessableAttachmentTest < ActiveSupport::TestCase
   setup { Current.session = sessions(:david) }
 
@@ -16,9 +13,6 @@ class Fizzy::Saas::UnprocessableAttachmentTest < ActiveSupport::TestCase
     assert_equal 1, comment.body.embeds.count
   end
 
-  # A form upload takes a different path from an embed: Rails transforms the immediate variants straight
-  # from the uploaded io, before the blob is stored, and no job is involved. Left alone the save raised, the
-  # attachment row existed, and the file was never uploaded.
   test "an avatar uploads when its variant cannot be made" do
     transforms_raise Fizzy::Saas::Cell::UnprocessableAttachment.new("killed: fsize")
     user = users(:david)
@@ -29,8 +23,6 @@ class Fizzy::Saas::UnprocessableAttachmentTest < ActiveSupport::TestCase
     assert blob.service.exist?(blob.key), "the original must still be uploaded"
   end
 
-  # One variant failing says nothing about the others: a large animated GIF can outgrow the cell's output
-  # limit at 1024×768 and fit at 800×600. Every variant gets its own attempt.
   test "the remaining variants are still attempted after one cannot be made" do
     attempted = []
     ActiveStorage::Variation.any_instance.stubs(:transform).with do |*|
@@ -43,9 +35,7 @@ class Fizzy::Saas::UnprocessableAttachmentTest < ActiveSupport::TestCase
     assert_equal Attachments::VARIANTS.size, attempted.size
   end
 
-  # The form path runs its own loop over the variants, and the rescue has to sit inside it: around it, the
-  # first failure would skip the rest and leave the variants unmarked as processed, so Rails would run every
-  # one again as a job after commit. This holds a copy of a private Rails method to its reason for existing.
+  # Holds a copy of a private Rails method to its reason for existing.
   test "the form path still attempts every immediate variant, and does not enqueue them again" do
     attempted = []
     ActiveStorage::Variation.any_instance.stubs(:transform).with do |*|
@@ -61,17 +51,12 @@ class Fizzy::Saas::UnprocessableAttachmentTest < ActiveSupport::TestCase
     assert_equal 1, attempted.size, "the avatar declares one immediate variant"
   end
 
-  # A cell that is saturated or restarting says nothing about the file. The client gem retries the transient
-  # class on these jobs, and nothing here may get in the way of that.
   test "a transient failure is left to the retry" do
     transforms_raise Fizzy::Saas::Cell::ProcessingUnavailable.new("capacity")
 
     assert_nothing_raised { comment_with_embed }
   end
 
-  # Rescuing is where the raise stops, so it is the one place a permanent verdict has to be reported from —
-  # elsewhere the raise reaches Sentry on its own. Once per variant, not twice: the perform.hot_cell
-  # subscriber reports nothing.
   test "a permanent verdict on the job path is reported once" do
     transforms_raise Fizzy::Saas::Cell::UnprocessableAttachment.new("killed: fsize")
     Rails.error.expects(:report).with { |error, **| error.is_a?(Fizzy::Saas::Cell::UnprocessableAttachment) }

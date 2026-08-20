@@ -76,19 +76,12 @@ class Yabeda::HotCellTest < ActiveSupport::TestCase
     assert_equal 1, counter(:requests, code: "capacity", cause: "")
   end
 
-  # `killed` is one code and several verdicts: which limit the worker hit decides whether the file did it.
-  # The counter carries the cause so a graph can stack kills by it, and every other code carries an empty
-  # one — a label that is sometimes absent is a separate series in Prometheus, not the same one.
   test "counts a kill under its cause" do
     Yabeda::HotCell.record_perform perform_event(code: "killed", cause: "fsize")
 
     assert_equal 1, counter(:requests, code: "killed", cause: "fsize")
   end
 
-  # The histogram says how long transforms take on a host; it cannot say what one upload paid. That is
-  # what a request's own log line is for, and it must carry both the cell's time and the caller's, because
-  # their difference is the queue and the socket — the number that says whether the cell or the plumbing
-  # was slow.
   test "logs what each call cost" do
     Yabeda::HotCell.record_perform perform_event(perform_ms: 250, duration_ms: 310, bytes_in: 4096, bytes_out: 512)
 
@@ -107,7 +100,6 @@ class Yabeda::HotCellTest < ActiveSupport::TestCase
     assert_equal "capacity", logged["code"]
   end
 
-  # `killed` alone says a worker died; the cause says whether the file did it. Both travel on the event.
   test "logs why a worker was killed" do
     Yabeda::HotCell.record_perform perform_event(code: "killed", cause: "fsize")
 
@@ -115,10 +107,6 @@ class Yabeda::HotCellTest < ActiveSupport::TestCase
     assert_equal "fsize", logged["cause"]
   end
 
-  # The raise the caller sees already reaches Sentry with the right class. A report from here was a second
-  # copy of the same event under a second name — and a wrong one, because the payload carries `code` and
-  # not `cause`, so `killed` could not be told permanent from transient and every kill was filed as the
-  # transient class at warning.
   test "does not report a failure to Sentry, because the raise already does" do
     Rails.error.expects(:report).never
 
@@ -146,8 +134,8 @@ class Yabeda::HotCellTest < ActiveSupport::TestCase
       cell.stubs(:metrics).returns(stub(ok?: true, result: counters))
     end
 
-    # `duration_ms` is what the caller waited, which the event measures itself; the payload only carries
-    # what the cell reported. Faking it takes the same start/finish the real event has.
+    # duration_ms is measured by the event itself, not carried in the payload, so faking it takes the
+    # same start/finish the real event has.
     def perform_event(code: nil, perform_ms: 0, cause: nil, duration_ms: 0, bytes_in: nil, bytes_out: nil)
       start = Time.now
       ActiveSupport::Notifications::Event.new("perform.hot_cell", start, start + duration_ms / 1000.0, nil,
@@ -155,8 +143,6 @@ class Yabeda::HotCellTest < ActiveSupport::TestCase
           code: code, cause: cause, perform_ms: perform_ms, bytes_in: bytes_in, bytes_out: bytes_out })
     end
 
-    # The line reads like Active Storage's own — `Storage (211.3ms) Downloaded file...` — with the duration
-    # up front where the eye expects it, and the detail as JSON after.
     def logged
       JSON.parse @log.string[/^  HotCell \([\d.]+ms\) (\{.*\})$/, 1]
     end

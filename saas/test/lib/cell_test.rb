@@ -7,8 +7,6 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
   # or every later test in whatever order minitest chose runs without a registered cell.
   teardown { Cell.register! }
 
-  # Development runs the app and its cell as one user, so there is no group to share and chowning into one
-  # the app is not in would be EPERM on every conversion.
   test "no group is set when the environment names none" do
     with_env "HOTCELL_GROUP" => nil do
       Cell.register!
@@ -17,8 +15,6 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
     end
   end
 
-  # A group name, or any typo, is `0` under to_i — root — and the client would chown every descriptor to
-  # it. A mistake in a deploy file must not look like a working configuration.
   test "a group that is not a number raises rather than meaning root" do
     with_env "HOTCELL_GROUP" => "hotcell" do
       error = assert_raises(HotCell::ConfigurationError) { Cell.register! }
@@ -27,8 +23,6 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
     end
   end
 
-  # Anything that reaches the work socket forks a worker and takes a queue slot, so it is opt-in: a caller
-  # that only wants to know whether the cell is there must not be able to spend one by accident.
   test "diagnostics puts nothing on the cell's queue unless asked" do
     Cell.stubs(:echo).raises("echo must not run here")
     Cell.stubs(:reopen).raises("reopen must not run here")
@@ -40,14 +34,10 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
     assert_equal %i[ at host root describe metrics echo reopen ], Cell.diagnostics(work: true).keys
   end
 
-  # The round trips report what they compared, and nothing above them looked at it — so a cell returning
-  # the wrong bytes answered /hotcellz with a 200.
   test "a round trip that returns different bytes is not ok" do
     assert_raises(Cell::CheckFailed) { Cell.send :round_trip, silent_client, "hotcell" }
   end
 
-  # Staged means the worker read a copy on its own scratch rather than the caller's file, so the check
-  # proved nothing about the descriptor it was written to prove.
   test "a round trip whose input was staged is not ok" do
     error = assert_raises(Cell::CheckFailed) { Cell.send :round_trip, staging_client, "hotcell" }
 
@@ -112,9 +102,6 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
     assert_operator Cell::TIMEOUT, :>=, queue_wait + deadline + kill_and_reply
   end
 
-  # The gem's default, asserted rather than set, because nothing here should own the number — but a control
-  # call on the work timeout is what blanks a host's metrics instead of reporting its cell down. Yabeda
-  # collects inside the scrape request, so this has to answer well within one.
   test "control calls are bounded tighter than work calls and than a scrape" do
     scrape_timeout = 10
 
@@ -123,14 +110,12 @@ class Fizzy::Saas::CellTest < ActiveSupport::TestCase
   end
 
   private
-    # Answers without writing the output, so the bytes cannot match.
     def silent_client
       Class.new do
         def self.perform_in_hotcell(input, output) = { bytes: 0, staged: false }
       end
     end
 
-    # Returns the right bytes, having read a copy on its own scratch rather than the caller's file.
     def staging_client
       Class.new do
         def self.perform_in_hotcell(input, output)

@@ -2,19 +2,12 @@ require "test_helper"
 require "erb"
 require "kamal"
 
-# Every one of these flags is what makes a cell a cell. Omit one and the protection is gone while the
-# cell goes on serving requests exactly as before, so nothing else would notice.
-#
-# Asserted against the `docker run` Kamal generates rather than against the YAML this repository wrote,
-# because the two are not the same document. Kamal contributes flags of its own, so a setting can be
-# present in the file and reach the daemon twice — which is a `docker: conflicting options` and a cell that
-# never starts, from a file that reads correctly.
-#
-# Every destination, because a destination file is deep-merged into the base and arrays are replaced rather
-# than merged.
+# Asserted against the `docker run` Kamal generates rather than the YAML, because Kamal contributes flags
+# of its own — a setting can be present in the file and reach the daemon twice, which is a
+# `docker: conflicting options` from a file that reads correctly. Every destination, because destination
+# files deep-merge into the base and arrays are replaced rather than merged.
 class HotcellAccessoryTest < ActiveSupport::TestCase
-  # Derived rather than listed, so a destination added later is covered the day it lands. `beta` is the
-  # shared template the numbered betas render, and it raises without BETA_NUMBER rather than deploying.
+  # `beta` is the shared template the numbered betas render; it raises without BETA_NUMBER.
   DESTINATIONS = Dir[Rails.root.join("saas/config/deploy.*.yml")]
     .map { File.basename(it, ".yml").delete_prefix("deploy.") } - %w[ beta ]
 
@@ -35,9 +28,8 @@ class HotcellAccessoryTest < ActiveSupport::TestCase
     end
   end
 
-  # The size cap and the nosuid,nodev,noexec flags ride the host mount, where this suite cannot see
-  # them — app_kamal's chef recipe owns those. From here we can only hold the mount itself: scratch is
-  # the provisioned filesystem and no tmpfs competes for /tmp.
+  # The size cap and the nosuid,nodev,noexec flags ride the host mount, which app_kamal's chef recipe
+  # owns; from here only the mount itself is visible.
   test "scratch is the provisioned loopback filesystem" do
     each_destination do |command|
       assert_match "--volume /var/lib/hotcell-scratch:/tmp", command
@@ -62,10 +54,8 @@ class HotcellAccessoryTest < ActiveSupport::TestCase
     assert_equal [ "web", "jobs" ], accessory["roles"]
   end
 
-  # Three numbers in three places that must agree, and nothing else checks them. The cell's gid is what a
-  # descriptor's group is set to; the app must be in that group to set it, and must be told which group it
-  # is. Any one of them alone is a cell that answers echo and fails every operation that hands a tool a
-  # filename.
+  # Three numbers in three places that must agree, and nothing else checks them. Any one alone is a cell
+  # that answers echo and fails every operation that hands a tool a filename.
   test "the app shares the cell's group, and is told the same number" do
     DESTINATIONS.each do |destination|
       cell_gid = flag(run_command(destination), "--user")[/:(\d+)\z/, 1]
@@ -83,10 +73,8 @@ class HotcellAccessoryTest < ActiveSupport::TestCase
     assert_no_match(/:latest$/, accessory["image"])
   end
 
-  # A deploy never touches an accessory, so a pin left behind runs the old cell against the new app until
-  # somebody reboots it by hand — a client and server revision apart, which is a `protocol` failure on
-  # every request. The tag is a hash of exactly what the image is built from, so the two can only agree if
-  # the pin moved with the contents. Nothing else notices; this shipped once already.
+  # The tag is a hash of exactly what the image is built from, so the two can only agree if the pin moved
+  # with the contents. Nothing else notices a stale pin; this shipped once already.
   test "the pinned image is the one this tree builds" do
     built = `bash -c "source #{Rails.root}/saas/hotcell/bin/image && hotcell_image_tag #{Rails.root}"`.strip.split(":").last
 

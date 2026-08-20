@@ -1,8 +1,5 @@
-# The cell's image. HotCell installed this file once; it is yours to customize, and nothing inherits
-# from a published base image — this is the whole recipe.
-#
-# A cell carries a Ruby runtime and every gem in its loaded graph, all inside the blast radius, so treat
-# this file as a budget rather than an inventory. Which tools it holds is what decides its blast radius.
+# The cell's image. Everything here is inside the blast radius, so treat this file as a budget rather
+# than an inventory.
 
 ARG RUBY_VERSION=3.4
 

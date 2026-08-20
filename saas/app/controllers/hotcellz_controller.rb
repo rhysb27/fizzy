@@ -1,18 +1,8 @@
-# Two actions, because the two questions cost different things to answer.
-#
-# `show` is unauthenticated, like the /up beside it, so an alerting system holding no session can poll it.
-# It asks the control socket only: describe and metrics are answered by the supervisor inline, with no fork
-# and no queue, so no stranger can make this cell do work. It says `OK` or `FAIL` and nothing else — the
-# status is the alertable signal, and the cell's inventory, counters and configuration are not a stranger's
-# business.
-#
-# `test` crosses the work socket, which forks a worker per round trip. That is why it is staff-only: the
-# gate is what bounds who may spend one.
-#
-# The trade this makes: only the round trips can see a work socket the app cannot use, and they now sit
-# behind authentication — so a group or ownership mistake is not something a monitor will catch. It is a
-# configuration error rather than something that degrades on its own, and finding it is a person running
-# the checks, once, when the configuration changes.
+# Two actions, because the two questions cost different things to answer. `show` is unauthenticated so a
+# monitor can poll it, and asks only the control socket, which the supervisor answers inline with no fork.
+# `test` crosses the work socket, which forks a worker per round trip — the staff gate bounds who may
+# spend one. The trade: a broken work socket is invisible to a monitor, so a person runs `test` whenever
+# the configuration changes.
 class HotcellzController < ApplicationController
   allow_unauthenticated_access
   disallow_account_scope

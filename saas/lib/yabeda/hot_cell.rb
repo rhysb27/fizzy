@@ -1,12 +1,7 @@
 module Yabeda
-  # A cell's control socket is host-local, so only a process on the same host can reach it. The collect
-  # block runs in every scraped process on every host, which matches the topology exactly.
-  #
-  # Two namespace traps live in this file, and both fail silently. Inside `module Yabeda`, `Rails` resolves
-  # to Yabeda::Rails, so error reporting has to say ::Rails or it raises inside the rescue that was meant
-  # to swallow it. And `hotcell` is a DSL method that exists only inside Yabeda.configure, so a method
-  # factored out of the collect block has to say Yabeda.hotcell or it records nothing at all. The tests
-  # assert gauge values for that reason: asserting the block ran would pass against both.
+  # Two namespace traps here fail silently: inside `module Yabeda`, `Rails` resolves to Yabeda::Rails, so
+  # error reporting must say ::Rails; and `hotcell` is a DSL method that exists only inside
+  # Yabeda.configure, so factored-out methods must say Yabeda.hotcell or they record nothing.
   module HotCell
     def self.install!
       Yabeda.configure do
@@ -61,32 +56,22 @@ module Yabeda
       end
     end
 
-    # Deliberately no Sentry report from here. The client raises the cell's verdict as the registered
-    # permanent or transient class, and that raise reaches Sentry with the right class wherever nothing
-    # rescues it; where something rescues it to keep a save from failing, that rescue reports. A report
-    # from this subscriber as well was a second copy of the same event under a second name.
+    # Deliberately no Sentry report from here: the raise the caller sees already reaches Sentry, so a
+    # report here was a second copy under a second name.
     def self.record_perform(event)
       labels = { cell: event.payload[:cell], operation: event.payload[:operation] }
       code = event.payload[:code]
 
-      # cause is empty rather than absent for every code but killed: a label that is sometimes missing is a
-      # separate series in Prometheus, and a query by code would silently split.
+      # cause is empty rather than absent: a sometimes-missing label is a separate Prometheus series.
       Yabeda.hotcell.requests.increment(labels.merge(code: code || "ok", cause: event.payload[:cause].to_s))
       Yabeda.hotcell.perform.measure(labels, (event.payload[:perform_ms] || 0) / 1000.0)
       log_perform event, labels, code
     end
 
-    # One line per call, so an upload that ran a conversion inline shows what it paid. The histogram cannot
-    # say that: it knows how long transforms take on a host, not which request waited for one. Two clocks
-    # on purpose — `perform_ms` is what the cell measured inside the worker, `duration_ms` is what this
-    # process waited — because their difference is the queue and the socket, which is the number that says
-    # whether the cell or the plumbing was slow.
-    #
-    # `Rails.logger.info` rather than `logger.struct`, because `struct` is a method on the per-request
-    # proxy a controller or job holds, and a notification subscriber has neither. Structured logging still
-    # gathers every line written during a request onto that request's record, so this lands beside the
-    # request's own duration. Shaped like Active Storage's own `Storage (211.3ms) Downloaded file...`, with
-    # the duration up front where the eye expects it and the detail as JSON after.
+    # The line carries two clocks on purpose: `perform_ms` is what the cell measured, `duration_ms` is
+    # what this process waited, and their difference is the queue and the socket. `Rails.logger.info`
+    # rather than `logger.struct`, because `struct` lives on the per-request proxy and a subscriber
+    # has none.
     private_class_method def self.log_perform(event, labels, code)
       duration_ms = event.duration.round(1)
 
