@@ -57,7 +57,7 @@ FROM base
 # library (ActiveStorage::VIPS_AVAILABLE=false), and config/initializers/vips.rb only demands it
 # when no cell is registered.
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libsqlite3-0 build-essential sqlite3 libjemalloc-dev && \
+    apt-get install --no-install-recommends -y libsqlite3-0 sqlite3 libjemalloc-dev && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Copy built artifacts: gems, application
