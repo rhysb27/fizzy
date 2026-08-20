@@ -213,9 +213,8 @@ class GemfileDriftForwarder
 
         if d[:oss] != d[:saas]
           puts "  #{d[:name]}: spec #{d[:saas]} → #{d[:oss]}"
-          patched_content.gsub!(/#{Regexp.escape(d[:name])} \(#{Regexp.escape(d[:saas])}([^)]*)\)/) do
-            "#{d[:name]} (#{d[:oss]}#{$1})"
-          end
+          patched_content = patch_spec_version(patched_content, d[:name], d[:saas], d[:oss])
+          patched_content = patch_checksum(patched_content, d[:name])
         end
 
         if d[:oss_dep] && d[:saas_dep] && d[:oss_dep] != d[:saas_dep]
@@ -247,6 +246,43 @@ class GemfileDriftForwarder
         File.write(GEMFILE_SAAS_LOCK, original_content)
         exit 1
       end
+    end
+
+    def patch_spec_version(content, name, old_version, new_version)
+      map_lines(content) do |line, section|
+        if section == "CHECKSUMS"
+          line
+        else
+          line.gsub(/#{Regexp.escape(name)} \(#{Regexp.escape(old_version)}([^)]*)\)/) { "#{name} (#{new_version}#{$1})" }
+        end
+      end
+    end
+
+    def patch_checksum(content, name)
+      replacement = oss_checksum_line(name)
+
+      map_lines(content) do |line, section|
+        if section == "CHECKSUMS" && line.match?(/\A {2}#{Regexp.escape(name)} \(/)
+          replacement
+        else
+          line
+        end
+      end
+    end
+
+    def oss_checksum_line(name)
+      map_lines(File.read(GEMFILE_LOCK)) do |line, section|
+        line if section == "CHECKSUMS" && line.match?(/\A {2}#{Regexp.escape(name)} \(/)
+      end.then { |found| found unless found.empty? }
+    end
+
+    def map_lines(content)
+      section = nil
+
+      content.lines.filter_map do |line|
+        section = line.strip if line.match?(/\A\S/)
+        yield line, section
+      end.join
     end
 
     def patch_spec_subdependency(content, parent_name, dep_name, old_req, new_req)
@@ -323,6 +359,9 @@ when "self-test"
 
     DEPENDENCIES
     %{dependencies}
+
+    CHECKSUMS
+      shared_gem (%{shared_version}) sha256=%{shared_checksum}
 
     BUNDLED WITH
       2.6.2
@@ -407,6 +446,47 @@ when "self-test"
       refute_includes saas_content, "shared_gem (~> 1.3)"
     end
 
+    def test_forward_replaces_the_stale_checksum_with_the_one_from_gemfile_lock
+      write_lockfiles(
+        oss_version: "1.4.0", oss_deps: "  shared_gem (~> 1.4)\n  oss_only_gem", oss_checksum: "e" * 64,
+        saas_version: "1.3.2", saas_deps: "  shared_gem (~> 1.3)\n  saas_only_gem", saas_checksum: "f" * 64
+      )
+
+      capture_io { GemfileDriftForwarder.new.forward }
+
+      saas_content = File.read("Gemfile.saas.lock")
+      assert_includes saas_content, "shared_gem (1.4.0) sha256=#{"e" * 64}"
+      refute_includes saas_content, "f" * 64
+    end
+
+    def test_forward_drops_the_stale_checksum_when_gemfile_lock_has_none
+      write_lockfiles(
+        oss_version: "1.4.0", oss_deps: "  shared_gem (~> 1.4)\n  oss_only_gem",
+        saas_version: "1.3.2", saas_deps: "  shared_gem (~> 1.3)\n  saas_only_gem", saas_checksum: "f" * 64
+      )
+      File.write("Gemfile.lock", File.read("Gemfile.lock").sub(/^  shared_gem \(1\.4\.0\) sha256=.*\n/, ""))
+
+      capture_io { GemfileDriftForwarder.new.forward }
+
+      saas_content = File.read("Gemfile.saas.lock")
+      assert_includes saas_content, "shared_gem (1.4.0)"
+      refute_includes saas_content, "sha256"
+    end
+
+    def test_forward_copies_a_checksumless_entry_for_gems_resolved_outside_rubygems
+      write_lockfiles(
+        oss_version: "1.4.0", oss_deps: "  shared_gem (~> 1.4)\n  oss_only_gem",
+        saas_version: "1.3.2", saas_deps: "  shared_gem (~> 1.3)\n  saas_only_gem", saas_checksum: "f" * 64
+      )
+      File.write("Gemfile.lock", File.read("Gemfile.lock").sub(/^  shared_gem \(1\.4\.0\) sha256=.*$/, "  shared_gem (1.4.0)"))
+
+      capture_io { GemfileDriftForwarder.new.forward }
+
+      saas_content = File.read("Gemfile.saas.lock")
+      assert_includes saas_content, "CHECKSUMS\n  shared_gem (1.4.0)\n"
+      refute_includes saas_content, "sha256"
+    end
+
     def test_detects_gem_in_oss_lock_missing_from_saas_lock
       File.write("Gemfile.lock", <<~LOCK)
         GEM
@@ -488,9 +568,9 @@ when "self-test"
     end
 
     private
-      def write_lockfiles(oss_version:, oss_deps:, saas_version:, saas_deps:)
-        File.write("Gemfile.lock", LOCKFILE_TEMPLATE % { shared_version: oss_version, dependencies: oss_deps })
-        File.write("Gemfile.saas.lock", LOCKFILE_TEMPLATE % { shared_version: saas_version, dependencies: saas_deps })
+      def write_lockfiles(oss_version:, oss_deps:, saas_version:, saas_deps:, oss_checksum: "a" * 64, saas_checksum: "b" * 64)
+        File.write("Gemfile.lock", LOCKFILE_TEMPLATE % { shared_version: oss_version, dependencies: oss_deps, shared_checksum: oss_checksum })
+        File.write("Gemfile.saas.lock", LOCKFILE_TEMPLATE % { shared_version: saas_version, dependencies: saas_deps, shared_checksum: saas_checksum })
       end
 
       def write_lockfiles_with_subdeps(oss_child_req:, saas_child_req:)
