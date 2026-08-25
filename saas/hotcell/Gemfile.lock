@@ -1,8 +1,8 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    activestorage-hotcell-server (0.1.0)
-      hotcell-server (= 0.1.0)
+    activestorage-hotcell-server (0.2.0)
+      hotcell-server (= 0.2.0)
       image_processing (>= 2.0)
       mini_magick (>= 4.0)
       ruby-vips (>= 2.2)
@@ -17,9 +17,9 @@ GEM
     ffi (1.17.4-x86_64-darwin)
     ffi (1.17.4-x86_64-linux-gnu)
     ffi (1.17.4-x86_64-linux-musl)
-    hotcell-core (0.1.0)
-    hotcell-server (0.1.0)
-      hotcell-core (= 0.1.0)
+    hotcell-core (0.2.0)
+    hotcell-server (0.2.0)
+      hotcell-core (= 0.2.0)
     image_processing (2.0.3)
     logger (1.7.0)
     mini_magick (5.3.3)
@@ -42,11 +42,11 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
-  activestorage-hotcell-server (~> 0.1.0)
-  hotcell-server (~> 0.1.0)
+  activestorage-hotcell-server (~> 0.2.0)
+  hotcell-server (~> 0.2.0)
 
 CHECKSUMS
-  activestorage-hotcell-server (0.1.0) sha256=a4d2dfe5046726e1321ec274036ac48006c9f17fa6d102461920f491c3070110
+  activestorage-hotcell-server (0.2.0) sha256=84e810b865e662c63719006e074e3f15b499c6240ea4de6fd445a02760ea9463
   bundler (4.0.18) sha256=02d9a17429de1847b4e0c9f27a9ee4b20c0a74c0a641b4e77195d6019e3618ac
   ffi (1.17.4) sha256=bcd1642e06f0d16fc9e09ac6d49c3a7298b9789bcb58127302f934e437d60acf
   ffi (1.17.4-aarch64-linux-gnu) sha256=b208f06f91ffd8f5e1193da3cae3d2ccfc27fc36fba577baf698d26d91c080df
@@ -59,8 +59,8 @@ CHECKSUMS
   ffi (1.17.4-x86_64-darwin) sha256=aa70390523cf3235096cf64962b709b4cfbd5c082a2cb2ae714eb0fe2ccda496
   ffi (1.17.4-x86_64-linux-gnu) sha256=9d3db14c2eae074b382fa9c083fe95aec6e0a1451da249eab096c34002bc752d
   ffi (1.17.4-x86_64-linux-musl) sha256=3fdf9888483de005f8ef8d1cf2d3b20d86626af206cbf780f6a6a12439a9c49e
-  hotcell-core (0.1.0) sha256=0bfbe2f9850ad0ed3139fb60701c46aa5d9a01741f2f512ad80fb244ce6b9a36
-  hotcell-server (0.1.0) sha256=6f5f335a66bb382ace86b861244b61d4ff40e9d580538300e6f0c71eef6a05c9
+  hotcell-core (0.2.0) sha256=bf0c747dc724d2a57f3336e6cfdf6fd95d1464803945382b1f4ca5a04a8a0dba
+  hotcell-server (0.2.0) sha256=02ffc955c7ddfd7e2608a683a717b72aa1194b8840b2db809930190021df82f2
   image_processing (2.0.3) sha256=793e33f38470edd0a2d6bfd00acf8cb239c76284ba2e3dfb76633ac2b457f23a
   logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
   mini_magick (5.3.3) sha256=b3beed8a8cef36bd03666365f14b89cd344da0ecd373af53e617c71bfd426aab
