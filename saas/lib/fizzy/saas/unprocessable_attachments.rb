@@ -4,9 +4,12 @@ module Fizzy
     # transform inside the record's after_commit, so a raise there 500s a POST that succeeded. There are
     # two immediate paths, and only one is a job — a direct-uploaded embed runs under
     # `CreateVariantsJob.perform_now`, which `discard_on` catches, while a form-uploaded io is varied
-    # before the blob is stored, so a rescue catches it there. Neither catches the transient class, which
-    # the client gem already retries. Both catches report, because they are where the raise stops;
-    # everywhere else it reaches Sentry on its own.
+    # before the blob is stored, so a rescue catches it there. A third path is a request of its own:
+    # the representation controllers process on demand, synchronously in `#show`, so a permanent verdict
+    # there 500s a GET for a file the cell will never convert — `rescue_from` on their shared base class
+    # (Redirect and Proxy both inherit it) answers 422 instead. None of the three catches the transient
+    # class, which the client gem already retries. Every catch reports, because it is where the raise
+    # stops; everywhere else it reaches Sentry on its own.
     module UnprocessableAttachments
       # Rails' own loop, with the rescue inside it rather than around it: one variant failing must not skip
       # the rest, and the loop's last line marks the variants as processed — miss it and Rails re-runs every
@@ -36,6 +39,11 @@ module Fizzy
 
         %w[ ActiveStorage::CreateVariantsJob ActiveStorage::TransformJob ].each do |job|
           job.constantize.discard_on Cell::UnprocessableAttachment, report: true
+        end
+
+        ActiveStorage::Representations::BaseController.rescue_from Cell::UnprocessableAttachment do |error|
+          Rails.error.report error, handled: true, severity: :info
+          head :unprocessable_entity
         end
       end
     end
