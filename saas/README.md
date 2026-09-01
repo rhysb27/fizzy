@@ -91,6 +91,7 @@ Kamal builds app images and not accessory images, so the cell's image has its ow
 saas/hotcell/bin/build                        # locks the gem version, builds, pins deploy.yml to the tag
 saas/hotcell/bin/build --platform=linux/amd64 # what the hosts run
 saas/hotcell/bin/push                         # pushes that tag to the registry
+saas/hotcell/bin/check <destination>          # is that destination's accessory running the pinned tag?
 ```
 
 **The tag is a content hash**, the first 12 characters of a SHA-256 over the `Dockerfile`, `Gemfile`,
@@ -111,6 +112,17 @@ produced it. `push` happens after that commit, so pinning there would leave ever
 pin. Both lockfiles, the operations, and the pin go in one change.
 
 Tags are immutable and there is no `latest`: a deploy does not update an accessory, so `bin/kamal accessory reboot hotcell -d <destination>` pulls whatever the tag names at that moment. A moving tag would make what a host runs depend on when it last rebooted.
+
+### The pre-deploy check
+
+Because a deploy never touches an accessory, an app that has been moved onto a cell can reach a host whose cell is still running an older pinned image, or no cell at all. `saas/hotcell/bin/check` is what `saas/.kamal/hooks/pre-deploy` runs to catch that, and it takes a destination so you can run it by hand at any time. `SKIP_HOTCELL_CHECKS=1` skips it in a deploy.
+
+It asks two questions in order, because they have different fixes:
+
+1. **Is the pinned tag in the registry?** `docker manifest inspect` locally, so it costs no ssh. Missing means nobody built and pushed this commit's cell, and the remedy is `build` (with `--platform=linux/amd64` when your docker host is not amd64), `push`, then `accessory reboot`.
+2. **Is the accessory running it?** `docker inspect` of the `<service>-hotcell` container on one randomly chosen host. The image is published by this point, so the remedy is only `bin/kamal accessory reboot hotcell` — never a build or a push.
+
+Either question failing for a reason that is not an answer — docker not logged in, ssh not getting through — is reported as the check failing rather than as a verdict on the cell. Telling someone to rebuild a published image because `docker manifest inspect` could not authenticate is the failure mode that costs the most.
 
 ### Deploying the cell: the runbook
 

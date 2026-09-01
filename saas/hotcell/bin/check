@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+# Says whether a destination's hotcell accessory is running the image saas/config/deploy.yml pins, and
+# what to do when it is not. saas/.kamal/hooks/pre-deploy runs this before every deploy; run it by hand
+# any time.
+#
+# A deploy never touches an accessory, so an app that has been moved onto a cell can arrive on a host
+# whose cell is older, or absent. Two things can be wrong and they have different fixes, so they are
+# asked in order: has the pinned image been published at all, and is the accessory running it.
+#
+# Asks one randomly chosen host out of the accessory's roles: sshing all ten costs a minute on
+# production, and the pin drifts per destination rather than per host.
+set -uo pipefail
+
+bin_dir="$(cd "$(dirname "$0")" && pwd)"
+cell_dir="$(cd "$bin_dir/.." && pwd)"
+repo_root="$(cd "$cell_dir/../.." && pwd)"
+
+destination="${1:-${KAMAL_DESTINATION:-production}}"
+
+case "${1:-}" in
+  --help|-h)
+    cat <<USAGE
+Usage: saas/hotcell/bin/check <destination>
+
+Checks the hotcell accessory on one host of <destination> against the pin in saas/config/deploy.yml.
+USAGE
+    exit 0
+    ;;
+esac
+
+cd "$repo_root"
+
+# The tag is a hash of the cell's contents, so the build command is what produces the pinned tag, and the
+# hosts are amd64: an arm64 image reaches a host that cannot run it, so name the platform off amd64.
+build_command() {
+  local arch
+  arch="$(docker version --format '{{.Server.Arch}}' 2>/dev/null || true)"
+  if [ "$arch" = "amd64" ]; then
+    echo "saas/hotcell/bin/build"
+  else
+    echo "saas/hotcell/bin/build --platform=linux/amd64"
+  fi
+}
+
+skip_note() {
+  cat >&2 <<MSG
+
+To deploy anyway and sort the cell out afterwards:
+
+    SKIP_HOTCELL_CHECKS=1 bin/kamal deploy -d $destination
+MSG
+}
+
+# Through Kamal rather than the YAML: saas/config/deploy.yml resolves the gem's directory in ERB, and the
+# numbered beta destinations are ERB that renders the shared beta template.
+accessory=$(BUNDLE_GEMFILE=Gemfile.saas bundle exec ruby -r kamal -r pathname -e '
+  config = Kamal::Configuration.create_from(config_file: Pathname.new(ARGV[0]), destination: ARGV[1])
+  accessory = config.accessory(:hotcell)
+  puts config.service
+  puts accessory.image
+  puts accessory.hosts.sample
+' "$repo_root/saas/config/deploy.yml" "$destination")
+
+service=$(echo "$accessory" | sed -n 1p)
+pinned=$(echo "$accessory" | sed -n 2p)
+host=$(echo "$accessory" | sed -n 3p)
+
+if [ -z "$host" ]; then
+  echo "Found no hotcell host for $destination, aborting" >&2
+  exit 1
+fi
+
+echo "Checking the hotcell cell for $destination"
+echo "  pinned:    $pinned"
+
+# Is the pinned tag published at all? Local, so it costs no ssh, and answering it first separates "nobody
+# built this" from "nobody rebooted the accessory" — two different fixes.
+errors=$(mktemp)
+if docker manifest inspect "$pinned" >/dev/null 2>"$errors"; then
+  echo "  registry:  present"
+  rm -f "$errors"
+elif grep -qiE 'manifest unknown|manifest_unknown|not found|no such manifest' "$errors"; then
+  rm -f "$errors"
+  cat >&2 <<MSG
+  registry:  missing
+
+STOP. The hotcell image this commit pins has never been pushed.
+
+The tag is a hash of the cell's own contents, so a change under saas/hotcell/ gives a new tag, which has
+to be built and published before anything can run it. Rebooting the accessory now would find nothing to
+pull.
+
+Build it, push it, then boot it:
+
+    $(build_command)
+    saas/hotcell/bin/push
+    bin/kamal accessory reboot hotcell -d $destination
+
+Then deploy again.
+MSG
+  skip_note
+  exit 1
+else
+  cat >&2 <<MSG
+  registry:  unknown
+
+STOP. Could not tell whether the pinned hotcell image is in the registry.
+
+$(sed 's/^/    /' "$errors")
+
+That is this check failing rather than the deploy: docker may not be running, or you may not be logged
+in to registry.37signals.com. Sort that out and deploy again.
+MSG
+  rm -f "$errors"
+  skip_note
+  exit 1
+fi
+
+# The image is published, so anything wrong from here is a reboot and never a build or a push.
+# Keep ssh's own chatter out of $running: a banner or a "Permanently added ... to the list of known
+# hosts" warning folded into the image name compares unequal against a pin it prints identically to.
+errors=$(mktemp)
+running=$(ssh "app@$host" "docker inspect --format '{{.Config.Image}}' $service-hotcell" 2>"$errors") || running=""
+
+if [ -z "$running" ]; then
+  if grep -qiE 'no such object|no such container' "$errors"; then
+    cat >&2 <<MSG
+  running:   nothing (on $host)
+
+STOP. No hotcell accessory is running on $host.
+
+HOTCELL_ROOT is the only switch, so a registered cell carries every conversion and there is no
+in-process fallback: on this host attachment processing is failing now and will go on failing after the
+deploy.
+
+The pinned image is in the registry, so there is nothing to build or push. A deploy never boots an
+accessory, so boot it by hand:
+
+    bin/kamal accessory reboot hotcell -d $destination
+
+Then deploy again.
+MSG
+  else
+    cat >&2 <<MSG
+  running:   unknown (on $host)
+
+STOP. Could not ask $host what its hotcell accessory is running.
+
+$(sed 's/^/    /' "$errors")
+
+That is this check failing rather than the deploy: the ssh did not get through. Sort that out and deploy
+again.
+MSG
+  fi
+  rm -f "$errors"
+  skip_note
+  exit 1
+fi
+rm -f "$errors"
+
+if [ "$running" != "$pinned" ]; then
+  cat >&2 <<MSG
+  running:   $running (on $host)
+
+STOP. The hotcell accessory is running an image other than the one this commit pins.
+
+The cell that is running may well be converting files perfectly; what a version behind costs depends on
+what changed. But the app and its cell are built to match — a hotcell gem more than one revision apart
+fails every request with a protocol error — so the fix is to get the host onto the pinned image rather
+than to reason about the gap.
+
+The pinned image is in the registry, so there is nothing to build or push. Tags are immutable and there
+is no latest, so the accessory goes on running what it booted with until it is rebooted:
+
+    bin/kamal accessory reboot hotcell -d $destination
+
+Then deploy again.
+MSG
+  skip_note
+  exit 1
+fi
+
+echo "  running:   the pinned image (on $host)"
