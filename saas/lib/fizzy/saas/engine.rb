@@ -65,9 +65,9 @@ module Fizzy
         end
       end
 
-      # Warns when a client wants an operation the cell does not carry, and when the timeout is too tight
-      # for what the cell says it may take. Never fails boot: a cell that is restarting is a degraded
-      # deployment, not a broken one.
+      # Warns when this process is outside HOTCELL_GROUP, and when the timeout is too tight for what the
+      # cell says it may take. Never fails boot: a cell that is restarting is a degraded deployment, not a
+      # broken one.
       config.after_initialize do
         ::HotCell.describe_cells
       end

@@ -14,4 +14,10 @@ class HotcellImageTest < ActiveSupport::TestCase
     assert_match(/^(?:ENV )?\s*OMP_NUM_THREADS=2\b/, dockerfile)
     assert_match(/^(?:ENV )?\s*OMP_THREAD_LIMIT=8\b/, dockerfile)
   end
+
+  # Held here because the accessory's `no-new-privileges` covers this too, so dropping the strip breaks
+  # nothing a running cell can show you.
+  test "the cell carries no setuid or setgid binary" do
+    assert_match "find / -xdev -type f -perm /06000 -exec chmod a-s {} +", DOCKERFILE.read
+  end
 end

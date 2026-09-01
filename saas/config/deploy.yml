@@ -68,7 +68,7 @@ accessories:
     # would make what a host runs depend on when it last rebooted. saas/hotcell/bin/build writes this line;
     # saas/hotcell/bin/push publishes the tag. Until push has run the pull fails loudly, which is the right
     # way for an unbuilt image to fail.
-    image: registry.37signals.com/basecamp/fizzy-hotcell:275df248ed42
+    image: registry.37signals.com/basecamp/fizzy-hotcell:ba753374f69a
     roles: [ web, jobs ]  # a descriptor cannot cross machines, so a cell lives on its caller's host
     # An accessory's own key, not one of the options below. Kamal always emits a --network of its own,
     # defaulting to `kamal`, so the same setting under `options:` is a second --network flag and Docker
@@ -91,8 +91,9 @@ accessories:
       memory: 2g
       memory-swap: 2g  # equal to memory; omitted, Docker allows twice memory in swap and the limit stops holding
       # Deliberately no `ulimit: stack`, so the cell inherits the daemon's 8MB. A thread that overflows a
-      # smaller stack dies on SIGSEGV, which the supervisor maps to killed/memory — permanent, so the
-      # verdict is written against the customer's file. Raise the cell's own memory instead.
+      # smaller stack dies on SIGSEGV, which the supervisor reports as killed/crashed — transient, so the
+      # request is retried against the same limit for as long as the job keeps trying, and no verdict
+      # names the setting that caused it. Raise the cell's own memory instead.
 
       # Security. Omit one and the protection is gone while the cell serves requests exactly as before.
       # `network: none` is above, because it is an accessory key rather than a raw Docker flag.

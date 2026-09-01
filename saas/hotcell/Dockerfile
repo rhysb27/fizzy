@@ -23,9 +23,15 @@ RUN bundle install && rm -rf "$BUNDLE_PATH"/ruby/*/cache
 
 FROM ruby:${RUBY_VERSION}-slim
 
+# The upgrade applies Debian's pending security patches. `docker build --pull` takes the newest
+# `ruby:3.4-slim` tag, but that tag can sit behind an advisory already in `trixie-security` until
+# docker-library/ruby rebuilds it, so a clean build can ship a fixable High no rebuild of the cell would
+# clear. Upgrading here makes the patch level this image's own rather than upstream's release cadence.
+#
 # The tools this cell's operations run, and nothing else. No LibreOffice: Fizzy accepts office documents
 # and never previews them, so its parsers would be blast radius bought for nothing.
 RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends libvips42 mupdf-tools ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
@@ -66,6 +72,11 @@ COPY --from=build --chown=hotcell:hotcell /hotcell/bundle /hotcell/bundle
 COPY --chown=hotcell:hotcell Gemfile Gemfile.lock ./
 COPY --chown=hotcell:hotcell config.rb /hotcell/config.rb
 COPY --chown=hotcell:hotcell operations/ /hotcell/operations/
+
+# Nothing here needs to raise privilege, so nothing here should be able to. `no-new-privileges` on the
+# accessory already neutralizes a setuid binary at runtime; this removes the bits from the image itself,
+# so the two are independent and an image scan has nothing to report.
+RUN find / -xdev -type f -perm /06000 -exec chmod a-s {} +
 
 USER hotcell
 
