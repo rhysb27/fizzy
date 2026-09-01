@@ -59,7 +59,10 @@ fi
 # truth, and pinning below a requirement is exactly what a lockfile is for.
 if [ "$cell_version" != "$app_version" ]; then
   echo "Locking the cell to the application's hotcell $app_version (was ${cell_version:-none})"
-  sed -i "/hotcell/s/$cell_version/$app_version/g" "$cell_dir/Gemfile.lock"
+  # The CHECKSUMS lines carry a version too, and rewriting one there attaches the old release's sha256 to
+  # the new version, which bundler refuses as a checksum mismatch. Drop them instead and let the install
+  # below write the real ones.
+  sed -i "/hotcell/{/sha256=/d; s/$cell_version/$app_version/g}" "$cell_dir/Gemfile.lock"
   env -u RUBYOPT -u RUBYLIB -u BUNDLER_SETUP -u BUNDLER_VERSION -u BUNDLE_BIN_PATH -u BUNDLE_LOCKFILE \
     BUNDLE_GEMFILE="$cell_dir/Gemfile" bundle install --quiet
 
