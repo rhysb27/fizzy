@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DESTINATION="${KAMAL_DESTINATION:-production}"
+CONFIG_FILE="$(cd "$(dirname "$0")/../.." && pwd)/config/deploy.yml"
+
+# A deploy never touches an accessory, so an app that has been moved onto a cell can arrive before the
+# cell it expects. One randomly chosen host out of the accessory's roles: ssh'ing to all ten costs a
+# minute on production, and the pin drifts per destination rather than per host.
+check_hotcell_pin() {
+    local accessory pinned service host running errors
+
+    # Through Kamal rather than the YAML: saas/config/deploy.yml resolves the gem's directory in ERB, and
+    # the numbered beta destinations are ERB that renders the shared beta template.
+    accessory=$(BUNDLE_GEMFILE=Gemfile.saas bundle exec ruby -r kamal -r pathname -e '
+      config = Kamal::Configuration.create_from(config_file: Pathname.new(ARGV[0]), destination: ARGV[1])
+      accessory = config.accessory(:hotcell)
+      puts config.service
+      puts accessory.image
+      puts accessory.hosts.sample
+    ' "$CONFIG_FILE" "$DESTINATION")
+
+    service=$(echo "$accessory" | sed -n 1p)
+    pinned=$(echo "$accessory" | sed -n 2p)
+    host=$(echo "$accessory" | sed -n 3p)
+
+    if [ -z "$host" ]; then
+        echo "Found no hotcell host for $DESTINATION, aborting" >&2
+        exit 1
+    fi
+
+    # Keep ssh's own chatter out of $running: a banner or a "Permanently added ... to the list of known
+    # hosts" warning folded into the image name compares unequal against a pin it prints identically to.
+    errors=$(mktemp)
+    running=$(ssh "app@$host" "docker inspect --format '{{.Config.Image}}' $service-hotcell" 2>"$errors") || {
+        echo "No hotcell accessory running on $host:" >&2
+        sed 's/^/  /' "$errors" >&2
+        rm -f "$errors"
+        report_remedy
+        exit 1
+    }
+    rm -f "$errors"
+
+    if [ "$running" != "$pinned" ]; then
+        echo "$host runs the hotcell image $running, but saas/config/deploy.yml pins $pinned" >&2
+        report_remedy
+        exit 1
+    fi
+
+    echo "Hotcell accessory on $host runs the pinned $running"
+}
+
+report_remedy() {
+    echo "Publish the pinned image and boot it:" >&2
+    echo "  saas/hotcell/bin/push" >&2
+    echo "  bin/kamal accessory reboot hotcell -d $DESTINATION" >&2
+    echo "Or set SKIP_HOTCELL_CHECKS=1 to deploy anyway" >&2
+}
+
+if [ -z "${SKIP_HOTCELL_CHECKS:-}" ]; then
+    check_hotcell_pin
+fi
