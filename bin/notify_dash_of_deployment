@@ -18,8 +18,8 @@ if [ -n "$DASH_BASIC_AUTH_SECRET" ]; then
       "rev": $commit,
       "duration": $duration
       }' |
-    curl --user "$DASH_BASIC_AUTH_SECRET" -H "Content-Type: application/json" --data-binary @- \
-      https://dash.37signals.com/deploy
+    # curl --user "$DASH_BASIC_AUTH_SECRET" -H "Content-Type: application/json" --data-binary @- \
+    #   https://dash.37signals.com/deploy
 else
   echo "WARNING: Dash deploy notification not sent."
 fi

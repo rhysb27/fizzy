@@ -7,4 +7,4 @@
 min_version = "2026.7.5"
 
 [bootstrap.repos]
-"~/Work/basecamp/docker-dev" = { url = "https://github.com/basecamp/docker-dev.git", ref = "master" }
+# "~/Work/basecamp/docker-dev" = { url = "https://github.com/basecamp/docker-dev.git", ref = "master" }
